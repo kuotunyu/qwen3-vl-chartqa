@@ -1,0 +1,29 @@
+{
+ "base_model": "unsloth/Qwen3-VL-8B-Instruct-unsloth-bnb-4bit",
+ "adapter": "steven0226/qwen3vl-8b-chartqa-lora",
+ "eval_limit": null,
+ "metric": "relaxed_accuracy(5%)",
+ "table": [
+  {
+   "test split": "human",
+   "n": 1250,
+   "baseline (before)": 0.7528,
+   "fine-tuned (after)": 0.7544,
+   "\u0394": 0.0016
+  },
+  {
+   "test split": "augmented",
+   "n": 1250,
+   "baseline (before)": 0.9408,
+   "fine-tuned (after)": 0.9504,
+   "\u0394": 0.0096
+  },
+  {
+   "test split": "overall",
+   "n": 2500,
+   "baseline (before)": 0.8468,
+   "fine-tuned (after)": 0.8524,
+   "\u0394": 0.0056
+  }
+ ]
+}

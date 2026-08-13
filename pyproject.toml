@@ -1,0 +1,82 @@
+[project]
+name = "qwen3vl-chartqa-lora"
+version = "0.1.0"
+description = "QLoRA fine-tuning of Qwen3-VL-8B-Instruct on ChartQA for chart understanding"
+readme = "README.md"
+# Supported: 3.11 and 3.12, both exercised in CI.
+# Every published artifact in assets/ was produced on Python 3.12.13 (Colab A100);
+# the recorded runtime for each result is in the evidence JSON itself.
+requires-python = ">=3.11,<3.13"
+license = { text = "MIT" }
+dependencies = [
+    "huggingface-hub[cli]>=0.36",
+    "datasets>=4.0",
+    "pillow>=11.0",
+    "python-dotenv>=1.0",
+]
+
+[project.optional-dependencies]
+# Phase 1 local data/template validation — CPU only, no model weights required.
+# torch/torchvision are required by transformers' Qwen3VLVideoProcessor import
+# guard even for text/image-only chat-template calls; CPU wheels are enough here.
+data = [
+    "transformers>=4.57",
+    "torch>=2.5",
+    "torchvision>=0.20",
+]
+# Optional local demo dependencies — quantized-model inference + Gradio UI.
+# On Windows, torch/torchvision resolve from the PyTorch cu126 index (see
+# [tool.uv.sources] below and scripts/setup_demo_env.md). GPU training/quantization
+# packages (unsloth, trl, llm-compressor, vllm) are installed inline inside the
+# Colab notebooks, not here, since they only run on Colab's Linux A100 runtime.
+demo = [
+    "torch>=2.5",
+    # torchvision: transformers' Qwen3VL processor import guard requires it
+    "torchvision>=0.20",
+    "transformers>=4.57",
+    "accelerate>=1.2",
+    # bitsandbytes: DEMO_MODE=lora_4bit loads the pre-quantized bnb-4bit checkpoint
+    "bitsandbytes>=0.45",
+    # peft: attaches the LoRA adapter in DEMO_MODE=lora_4bit
+    "peft>=0.14",
+    # compressed-tensors: DEMO_MODE=awq loads the llm-compressor W4A16 checkpoint
+    "compressed-tensors>=0.9",
+    "gradio>=5.9",
+]
+space = [
+    "gradio==6.20.0",
+    "huggingface-hub==1.23.0",
+    "httpx==0.28.1",
+    "pillow==11.3.0",
+    "fastapi==0.139.2",
+    "pydantic==2.13.4",
+    "uvicorn==0.51.0",
+]
+
+[dependency-groups]
+dev = ["ruff==0.16.2"]
+
+[tool.ruff]
+target-version = "py311"
+# Notebooks are generated from the _build_*.py sources; lint those instead.
+extend-exclude = ["*.ipynb"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+# Embedded CSS/HTML in the Gradio app and the generated-notebook sources make a
+# hard line limit counterproductive; correctness rules are what matter here.
+ignore = ["E501"]
+
+[tool.uv]
+package = false
+
+# Windows 上 PyPI 的 torch 是 CPU wheel；demo 需要 CUDA 版（4090），
+# 指到 PyTorch 官方 cu126 index（Linux/Colab 不受影響，notebooks 也不走 pyproject）。
+[[tool.uv.index]]
+name = "pytorch-cu126"
+url = "https://download.pytorch.org/whl/cu126"
+explicit = true
+
+[tool.uv.sources]
+torch = [{ index = "pytorch-cu126", marker = "sys_platform == 'win32'" }]
+torchvision = [{ index = "pytorch-cu126", marker = "sys_platform == 'win32'" }]

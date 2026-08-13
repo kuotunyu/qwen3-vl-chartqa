@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "created_at_utc": "2026-07-15T14:38:17.716146+00:00",
+  "source_model": "steven0226/qwen3vl-8b-chartqa-merged-16bit",
+  "adapter": "steven0226/qwen3vl-8b-chartqa-lora",
+  "method": "AWQ / compressed-tensors W4A16",
+  "weight_bits": 4,
+  "group_size": 32,
+  "ignored_modules": [
+    "re:.*lm_head",
+    "re:.*visual.*",
+    "re:model[.]visual.*"
+  ],
+  "calibration_dataset": "HuggingFaceM4/ChartQA train",
+  "calibration_samples": 256,
+  "calibration_max_length": 2048,
+  "seed": 3407,
+  "smoke_test": false,
+  "gpu": "NVIDIA A100-SXM4-40GB",
+  "python": "3.12.13",
+  "packages": {
+    "torch": "2.11.0+cu128",
+    "transformers": "5.10.1",
+    "llmcompressor": "0.12.0",
+    "compressed-tensors": "0.17.1",
+    "datasets": "5.0.0"
+  }
+}

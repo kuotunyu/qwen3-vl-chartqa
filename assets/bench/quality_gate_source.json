@@ -1,0 +1,72 @@
+{
+ "merged": "steven0226/qwen3vl-8b-chartqa-merged-16bit",
+ "awq": "steven0226/qwen3vl-8b-chartqa-awq",
+ "eval_n_per_split": 1250,
+ "metric": "relaxed_accuracy(5%)",
+ "engine": "vllm isolated subprocess",
+ "quality_gate_max_drop_pp": 2.0,
+ "quality_gate_passed": true,
+ "table": [
+  {
+   "test split": "human",
+   "n": 1250,
+   "merged-16bit": 0.7728,
+   "awq-w4a16-g32": 0.7656,
+   "Δ": -0.0072
+  },
+  {
+   "test split": "augmented",
+   "n": 1250,
+   "merged-16bit": 0.952,
+   "awq-w4a16-g32": 0.9448,
+   "Δ": -0.0072
+  },
+  {
+   "test split": "overall",
+   "n": 2500,
+   "merged-16bit": 0.8624,
+   "awq-w4a16-g32": 0.8552,
+   "Δ": -0.0072
+  }
+ ],
+ "runtime": {
+  "merged": {
+   "model": "steven0226/qwen3vl-8b-chartqa-merged-16bit",
+   "model_revision": "519060ef43df3261e0512e5ae4c82a4d4e675f32",
+   "model_fingerprint": "62b1168902151c870f8b361d894a7af66264c68cc4e90219a0c8a828f85eb4a6",
+   "dataset": "HuggingFaceM4/ChartQA",
+   "dataset_revision": "b605b6e08b57faf4359aeb2fe6a3ca595f99b6c5",
+   "eval_recipe": "chartqa-test-seed3407-jpeg1024q90-shortanswer-relaxed5-v1-vllm0251cu129",
+   "engine": "vllm",
+   "python": "3.12.13",
+   "packages": {
+    "vllm": "0.25.1+cu129",
+    "torch": "2.11.0+cu129",
+    "transformers": "5.10.1",
+    "compressed-tensors": "0.17.0"
+   },
+   "max_model_len": 4096,
+   "max_num_seqs": 8,
+   "enforce_eager": true
+  },
+  "awq": {
+   "model": "steven0226/qwen3vl-8b-chartqa-awq",
+   "model_revision": "e81d9332446307adc1b219ed326c8e55cead9015",
+   "model_fingerprint": "22c674970d90a22b2e87b6b3a630df2b5e7e2f5cbcb0a3dff65e404f548d9f31",
+   "dataset": "HuggingFaceM4/ChartQA",
+   "dataset_revision": "b605b6e08b57faf4359aeb2fe6a3ca595f99b6c5",
+   "eval_recipe": "chartqa-test-seed3407-jpeg1024q90-shortanswer-relaxed5-v1-vllm0251cu129",
+   "engine": "vllm",
+   "python": "3.12.13",
+   "packages": {
+    "vllm": "0.25.1+cu129",
+    "torch": "2.11.0+cu129",
+    "transformers": "5.10.1",
+    "compressed-tensors": "0.17.0"
+   },
+   "max_model_len": 4096,
+   "max_num_seqs": 8,
+   "enforce_eager": true
+  }
+ }
+}

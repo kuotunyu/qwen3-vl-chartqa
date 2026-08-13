@@ -1,0 +1,83 @@
+[
+  {
+    "id": "ood_01_vertical_bar",
+    "chart_type": "bar",
+    "image": "ood_01_vertical_bar.png",
+    "question": "Which region has the highest revenue?",
+    "expected": "West",
+    "skill": "comparison",
+    "source": "synthetic-ood-v1"
+  },
+  {
+    "id": "ood_02_grouped_bar",
+    "chart_type": "grouped_bar",
+    "image": "ood_02_grouped_bar.png",
+    "question": "How many units of Product B were sold in Q3?",
+    "expected": "72",
+    "skill": "lookup",
+    "source": "synthetic-ood-v1"
+  },
+  {
+    "id": "ood_03_line",
+    "chart_type": "line",
+    "image": "ood_03_line.png",
+    "question": "How many thousand monthly active users were there in 2024?",
+    "expected": "45",
+    "skill": "lookup",
+    "source": "synthetic-ood-v1"
+  },
+  {
+    "id": "ood_04_stacked",
+    "chart_type": "stacked_bar",
+    "image": "ood_04_stacked.png",
+    "question": "What was the total number of support tickets in May?",
+    "expected": "100",
+    "skill": "arithmetic",
+    "source": "synthetic-ood-v1"
+  },
+  {
+    "id": "ood_05_scatter",
+    "chart_type": "scatter",
+    "image": "ood_05_scatter.png",
+    "question": "Which campaign has the highest conversion rate?",
+    "expected": "Campaign D",
+    "skill": "comparison",
+    "source": "synthetic-ood-v1"
+  },
+  {
+    "id": "ood_06_donut",
+    "chart_type": "donut",
+    "image": "ood_06_donut.png",
+    "question": "What percentage of sessions came from Mobile?",
+    "expected": "48%",
+    "skill": "lookup",
+    "source": "synthetic-ood-v1"
+  },
+  {
+    "id": "ood_07_heatmap",
+    "chart_type": "heatmap",
+    "image": "ood_07_heatmap.png",
+    "question": "Which team had the highest score in Week 3?",
+    "expected": "Team C",
+    "skill": "comparison",
+    "source": "synthetic-ood-v1"
+  },
+  {
+    "id": "ood_08_horizontal",
+    "chart_type": "horizontal_bar",
+    "image": "ood_08_horizontal.png",
+    "question": "What is the difference in cycle time between Alpha and Delta?",
+    "expected": "24",
+    "skill": "arithmetic",
+    "source": "synthetic-ood-v1"
+  },
+  {
+    "id": "ood_09_ocr",
+    "chart_type": "annotated_line",
+    "image": "ood_09_ocr.png",
+    "question": "What was the calibration reading in 2024?",
+    "expected": "119",
+    "skill": "ocr-heavy",
+    "source": "synthetic-ood-v1"
+  }
+]

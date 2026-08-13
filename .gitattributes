@@ -1,0 +1,12 @@
+# Normalise to LF in the repository regardless of contributor platform.
+* text=auto eol=lf
+
+# Binary assets must never be line-ending converted.
+*.png binary
+*.jpg binary
+*.gguf binary
+*.safetensors binary
+
+# Generated from the matching _build_*.py sources; keep diffs readable but do
+# not let tooling rewrite them as text with platform endings.
+*.ipynb text eol=lf

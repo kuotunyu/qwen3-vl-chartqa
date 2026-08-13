@@ -1,0 +1,41 @@
+default_stage:
+  default_modifiers:
+    AWQModifier:
+      mappings:
+      - smooth_layer: re:.*input_layernorm$
+        balance_layers: ['re:.*q_proj$', 're:.*k_proj$', 're:.*v_proj$']
+        activation_hook_target: null
+      - smooth_layer: re:.*v_proj$
+        balance_layers: ['re:.*o_proj$']
+        activation_hook_target: null
+      - smooth_layer: re:.*post_attention_layernorm$
+        balance_layers: ['re:.*gate_proj$', 're:.*up_proj$']
+        activation_hook_target: null
+      - smooth_layer: re:.*up_proj$
+        balance_layers: ['re:.*down_proj$']
+        activation_hook_target: null
+      duo_scaling: false
+      n_grid: 20
+    QuantizationModifier:
+      config_groups:
+        group_0:
+          targets: [Linear]
+          weights:
+            num_bits: 4
+            type: int
+            symmetric: true
+            group_size: 32
+            strategy: group
+            block_structure: null
+            dynamic: false
+            actorder: null
+            scale_dtype: null
+            zp_dtype: null
+            observer: mse
+            observer_kwargs: {}
+          input_activations: null
+          output_activations: null
+          format: null
+      targets: [Linear]
+      ignore: ['re:.*lm_head', 're:.*visual.*', 're:model[.]visual.*']
+      bypass_divisibility_checks: false

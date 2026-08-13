@@ -1,0 +1,830 @@
+{
+ "schema_version": 1,
+ "evidence_kind": "per_item_correctness",
+ "model": "awq-w4a16-g32",
+ "metric": "relaxed_accuracy(5%)",
+ "dataset": "HuggingFaceM4/ChartQA",
+ "redistribution_note": "Per-item correctness only. ChartQA queries, gold labels and chart images are not redistributed by this repository. query_sha256 is a content-free SHA-256 alignment identifier so a holder of the pinned ChartQA test split can verify this evidence indexes the real dataset (see scripts/verify_dataset_alignment.py). It is not anonymization: a corpus holder can map hashes back to queries. The raw prediction string is intentionally omitted, because prediction + correct=true would reconstruct the gold label for every correct item.",
+ "splits": {
+  "human": {
+   "n": 100,
+   "n_correct": 74,
+   "relaxed_accuracy": 0.74,
+   "items": [
+    {
+     "idx": 0,
+     "correct": false
+    },
+    {
+     "idx": 1,
+     "correct": true
+    },
+    {
+     "idx": 2,
+     "correct": true
+    },
+    {
+     "idx": 3,
+     "correct": false
+    },
+    {
+     "idx": 4,
+     "correct": true
+    },
+    {
+     "idx": 5,
+     "correct": true
+    },
+    {
+     "idx": 6,
+     "correct": true
+    },
+    {
+     "idx": 7,
+     "correct": true
+    },
+    {
+     "idx": 8,
+     "correct": true
+    },
+    {
+     "idx": 9,
+     "correct": true
+    },
+    {
+     "idx": 10,
+     "correct": true
+    },
+    {
+     "idx": 11,
+     "correct": false
+    },
+    {
+     "idx": 12,
+     "correct": true
+    },
+    {
+     "idx": 13,
+     "correct": true
+    },
+    {
+     "idx": 14,
+     "correct": true
+    },
+    {
+     "idx": 15,
+     "correct": true
+    },
+    {
+     "idx": 16,
+     "correct": false
+    },
+    {
+     "idx": 17,
+     "correct": true
+    },
+    {
+     "idx": 18,
+     "correct": true
+    },
+    {
+     "idx": 19,
+     "correct": true
+    },
+    {
+     "idx": 20,
+     "correct": true
+    },
+    {
+     "idx": 21,
+     "correct": false
+    },
+    {
+     "idx": 22,
+     "correct": false
+    },
+    {
+     "idx": 23,
+     "correct": true
+    },
+    {
+     "idx": 24,
+     "correct": true
+    },
+    {
+     "idx": 25,
+     "correct": false
+    },
+    {
+     "idx": 26,
+     "correct": true
+    },
+    {
+     "idx": 27,
+     "correct": true
+    },
+    {
+     "idx": 28,
+     "correct": true
+    },
+    {
+     "idx": 29,
+     "correct": true
+    },
+    {
+     "idx": 30,
+     "correct": false
+    },
+    {
+     "idx": 31,
+     "correct": true
+    },
+    {
+     "idx": 32,
+     "correct": true
+    },
+    {
+     "idx": 33,
+     "correct": true
+    },
+    {
+     "idx": 34,
+     "correct": true
+    },
+    {
+     "idx": 35,
+     "correct": true
+    },
+    {
+     "idx": 36,
+     "correct": true
+    },
+    {
+     "idx": 37,
+     "correct": true
+    },
+    {
+     "idx": 38,
+     "correct": true
+    },
+    {
+     "idx": 39,
+     "correct": true
+    },
+    {
+     "idx": 40,
+     "correct": false
+    },
+    {
+     "idx": 41,
+     "correct": true
+    },
+    {
+     "idx": 42,
+     "correct": true
+    },
+    {
+     "idx": 43,
+     "correct": false
+    },
+    {
+     "idx": 44,
+     "correct": false
+    },
+    {
+     "idx": 45,
+     "correct": true
+    },
+    {
+     "idx": 46,
+     "correct": true
+    },
+    {
+     "idx": 47,
+     "correct": true
+    },
+    {
+     "idx": 48,
+     "correct": true
+    },
+    {
+     "idx": 49,
+     "correct": false
+    },
+    {
+     "idx": 50,
+     "correct": true
+    },
+    {
+     "idx": 51,
+     "correct": false
+    },
+    {
+     "idx": 52,
+     "correct": true
+    },
+    {
+     "idx": 53,
+     "correct": true
+    },
+    {
+     "idx": 54,
+     "correct": true
+    },
+    {
+     "idx": 55,
+     "correct": true
+    },
+    {
+     "idx": 56,
+     "correct": true
+    },
+    {
+     "idx": 57,
+     "correct": false
+    },
+    {
+     "idx": 58,
+     "correct": true
+    },
+    {
+     "idx": 59,
+     "correct": true
+    },
+    {
+     "idx": 60,
+     "correct": true
+    },
+    {
+     "idx": 61,
+     "correct": true
+    },
+    {
+     "idx": 62,
+     "correct": false
+    },
+    {
+     "idx": 63,
+     "correct": true
+    },
+    {
+     "idx": 64,
+     "correct": true
+    },
+    {
+     "idx": 65,
+     "correct": false
+    },
+    {
+     "idx": 66,
+     "correct": true
+    },
+    {
+     "idx": 67,
+     "correct": false
+    },
+    {
+     "idx": 68,
+     "correct": false
+    },
+    {
+     "idx": 69,
+     "correct": true
+    },
+    {
+     "idx": 70,
+     "correct": false
+    },
+    {
+     "idx": 71,
+     "correct": true
+    },
+    {
+     "idx": 72,
+     "correct": true
+    },
+    {
+     "idx": 73,
+     "correct": true
+    },
+    {
+     "idx": 74,
+     "correct": true
+    },
+    {
+     "idx": 75,
+     "correct": true
+    },
+    {
+     "idx": 76,
+     "correct": true
+    },
+    {
+     "idx": 77,
+     "correct": false
+    },
+    {
+     "idx": 78,
+     "correct": true
+    },
+    {
+     "idx": 79,
+     "correct": true
+    },
+    {
+     "idx": 80,
+     "correct": true
+    },
+    {
+     "idx": 81,
+     "correct": true
+    },
+    {
+     "idx": 82,
+     "correct": false
+    },
+    {
+     "idx": 83,
+     "correct": false
+    },
+    {
+     "idx": 84,
+     "correct": false
+    },
+    {
+     "idx": 85,
+     "correct": true
+    },
+    {
+     "idx": 86,
+     "correct": true
+    },
+    {
+     "idx": 87,
+     "correct": true
+    },
+    {
+     "idx": 88,
+     "correct": true
+    },
+    {
+     "idx": 89,
+     "correct": true
+    },
+    {
+     "idx": 90,
+     "correct": true
+    },
+    {
+     "idx": 91,
+     "correct": true
+    },
+    {
+     "idx": 92,
+     "correct": true
+    },
+    {
+     "idx": 93,
+     "correct": true
+    },
+    {
+     "idx": 94,
+     "correct": false
+    },
+    {
+     "idx": 95,
+     "correct": true
+    },
+    {
+     "idx": 96,
+     "correct": false
+    },
+    {
+     "idx": 97,
+     "correct": false
+    },
+    {
+     "idx": 98,
+     "correct": true
+    },
+    {
+     "idx": 99,
+     "correct": true
+    }
+   ]
+  },
+  "augmented": {
+   "n": 100,
+   "n_correct": 94,
+   "relaxed_accuracy": 0.94,
+   "items": [
+    {
+     "idx": 0,
+     "correct": true
+    },
+    {
+     "idx": 1,
+     "correct": true
+    },
+    {
+     "idx": 2,
+     "correct": true
+    },
+    {
+     "idx": 3,
+     "correct": true
+    },
+    {
+     "idx": 4,
+     "correct": true
+    },
+    {
+     "idx": 5,
+     "correct": true
+    },
+    {
+     "idx": 6,
+     "correct": true
+    },
+    {
+     "idx": 7,
+     "correct": true
+    },
+    {
+     "idx": 8,
+     "correct": true
+    },
+    {
+     "idx": 9,
+     "correct": true
+    },
+    {
+     "idx": 10,
+     "correct": true
+    },
+    {
+     "idx": 11,
+     "correct": true
+    },
+    {
+     "idx": 12,
+     "correct": true
+    },
+    {
+     "idx": 13,
+     "correct": true
+    },
+    {
+     "idx": 14,
+     "correct": true
+    },
+    {
+     "idx": 15,
+     "correct": true
+    },
+    {
+     "idx": 16,
+     "correct": true
+    },
+    {
+     "idx": 17,
+     "correct": true
+    },
+    {
+     "idx": 18,
+     "correct": false
+    },
+    {
+     "idx": 19,
+     "correct": true
+    },
+    {
+     "idx": 20,
+     "correct": true
+    },
+    {
+     "idx": 21,
+     "correct": true
+    },
+    {
+     "idx": 22,
+     "correct": true
+    },
+    {
+     "idx": 23,
+     "correct": true
+    },
+    {
+     "idx": 24,
+     "correct": true
+    },
+    {
+     "idx": 25,
+     "correct": true
+    },
+    {
+     "idx": 26,
+     "correct": false
+    },
+    {
+     "idx": 27,
+     "correct": true
+    },
+    {
+     "idx": 28,
+     "correct": true
+    },
+    {
+     "idx": 29,
+     "correct": true
+    },
+    {
+     "idx": 30,
+     "correct": true
+    },
+    {
+     "idx": 31,
+     "correct": true
+    },
+    {
+     "idx": 32,
+     "correct": true
+    },
+    {
+     "idx": 33,
+     "correct": true
+    },
+    {
+     "idx": 34,
+     "correct": true
+    },
+    {
+     "idx": 35,
+     "correct": true
+    },
+    {
+     "idx": 36,
+     "correct": true
+    },
+    {
+     "idx": 37,
+     "correct": true
+    },
+    {
+     "idx": 38,
+     "correct": true
+    },
+    {
+     "idx": 39,
+     "correct": true
+    },
+    {
+     "idx": 40,
+     "correct": true
+    },
+    {
+     "idx": 41,
+     "correct": true
+    },
+    {
+     "idx": 42,
+     "correct": true
+    },
+    {
+     "idx": 43,
+     "correct": true
+    },
+    {
+     "idx": 44,
+     "correct": true
+    },
+    {
+     "idx": 45,
+     "correct": true
+    },
+    {
+     "idx": 46,
+     "correct": false
+    },
+    {
+     "idx": 47,
+     "correct": true
+    },
+    {
+     "idx": 48,
+     "correct": false
+    },
+    {
+     "idx": 49,
+     "correct": true
+    },
+    {
+     "idx": 50,
+     "correct": false
+    },
+    {
+     "idx": 51,
+     "correct": true
+    },
+    {
+     "idx": 52,
+     "correct": true
+    },
+    {
+     "idx": 53,
+     "correct": true
+    },
+    {
+     "idx": 54,
+     "correct": true
+    },
+    {
+     "idx": 55,
+     "correct": true
+    },
+    {
+     "idx": 56,
+     "correct": true
+    },
+    {
+     "idx": 57,
+     "correct": true
+    },
+    {
+     "idx": 58,
+     "correct": true
+    },
+    {
+     "idx": 59,
+     "correct": true
+    },
+    {
+     "idx": 60,
+     "correct": true
+    },
+    {
+     "idx": 61,
+     "correct": true
+    },
+    {
+     "idx": 62,
+     "correct": true
+    },
+    {
+     "idx": 63,
+     "correct": true
+    },
+    {
+     "idx": 64,
+     "correct": true
+    },
+    {
+     "idx": 65,
+     "correct": true
+    },
+    {
+     "idx": 66,
+     "correct": true
+    },
+    {
+     "idx": 67,
+     "correct": true
+    },
+    {
+     "idx": 68,
+     "correct": true
+    },
+    {
+     "idx": 69,
+     "correct": true
+    },
+    {
+     "idx": 70,
+     "correct": false
+    },
+    {
+     "idx": 71,
+     "correct": true
+    },
+    {
+     "idx": 72,
+     "correct": true
+    },
+    {
+     "idx": 73,
+     "correct": true
+    },
+    {
+     "idx": 74,
+     "correct": true
+    },
+    {
+     "idx": 75,
+     "correct": true
+    },
+    {
+     "idx": 76,
+     "correct": true
+    },
+    {
+     "idx": 77,
+     "correct": true
+    },
+    {
+     "idx": 78,
+     "correct": true
+    },
+    {
+     "idx": 79,
+     "correct": true
+    },
+    {
+     "idx": 80,
+     "correct": true
+    },
+    {
+     "idx": 81,
+     "correct": true
+    },
+    {
+     "idx": 82,
+     "correct": true
+    },
+    {
+     "idx": 83,
+     "correct": true
+    },
+    {
+     "idx": 84,
+     "correct": true
+    },
+    {
+     "idx": 85,
+     "correct": true
+    },
+    {
+     "idx": 86,
+     "correct": true
+    },
+    {
+     "idx": 87,
+     "correct": true
+    },
+    {
+     "idx": 88,
+     "correct": true
+    },
+    {
+     "idx": 89,
+     "correct": true
+    },
+    {
+     "idx": 90,
+     "correct": true
+    },
+    {
+     "idx": 91,
+     "correct": true
+    },
+    {
+     "idx": 92,
+     "correct": true
+    },
+    {
+     "idx": 93,
+     "correct": true
+    },
+    {
+     "idx": 94,
+     "correct": true
+    },
+    {
+     "idx": 95,
+     "correct": true
+    },
+    {
+     "idx": 96,
+     "correct": true
+    },
+    {
+     "idx": 97,
+     "correct": true
+    },
+    {
+     "idx": 98,
+     "correct": true
+    },
+    {
+     "idx": 99,
+     "correct": true
+    }
+   ]
+  }
+ },
+ "dataset_revision": "b605b6e08b57faf4359aeb2fe6a3ca595f99b6c5",
+ "overall": {
+  "n": 200,
+  "n_correct": 168,
+  "relaxed_accuracy": 0.84
+ }
+}

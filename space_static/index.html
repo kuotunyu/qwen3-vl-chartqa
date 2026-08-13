@@ -1,0 +1,646 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Qwen3-VL 8B 在 ChartQA 上的 QLoRA 微調、AWQ 量化、A100 vLLM benchmark 與 GGUF 發布實證作品。">
+  <meta name="theme-color" content="#f2eee3">
+  <title>Qwen3-VL ChartQA｜圖表理解工作台</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Noto+Sans+TC:wght@400;500;600;700;800;900&family=Noto+Serif+TC:wght@700;900&display=swap" rel="stylesheet">
+  <script>document.documentElement.classList.add('js');</script>
+  <style>
+    :root {
+      --paper: #f2eee3;
+      --paper-deep: #e6dfcf;
+      --ink: #121922;
+      --muted: #5b6470;
+      --line: #17202b;
+      --signal: #ff5733;
+      --acid: #c6f04d;
+      --blue: #58718f;
+      --white: #fffdf7;
+      --shadow: 6px 6px 0 var(--ink);
+      --sans: "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+      --serif: "Noto Serif TC", "PMingLiU", serif;
+      --mono: "IBM Plex Mono", "Noto Sans TC", monospace;
+      --max: 1160px;
+      --text-xs: .84rem;
+      --text-sm: .92rem;
+      --text-base: 1rem;
+      --text-md: 1.08rem;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 1px 1px, rgba(18,25,34,.22) 1px, transparent 1.2px) 0 0 / 16px 16px,
+        var(--paper);
+      font-family: var(--sans);
+      font-size: var(--text-base);
+      line-height: 1.65;
+      overflow-x: hidden;
+    }
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 50;
+      opacity: .18;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.14'/%3E%3C/svg%3E");
+      mix-blend-mode: multiply;
+    }
+    a { color: inherit; }
+    img { display: block; max-width: 100%; }
+    button, a { -webkit-tap-highlight-color: transparent; }
+    ::selection { background: var(--acid); color: var(--ink); }
+    :focus-visible { outline: 3px solid var(--signal); outline-offset: 4px; }
+
+    .skip-link {
+      position: fixed;
+      left: 1rem;
+      top: -5rem;
+      z-index: 100;
+      background: var(--ink);
+      color: white;
+      padding: .7rem 1rem;
+      font-weight: 800;
+    }
+    .skip-link:focus { top: 1rem; }
+    .shell { width: min(calc(100% - 56px), var(--max)); margin-inline: auto; }
+
+    .topbar {
+      position: relative;
+      z-index: 40;
+      border-bottom: 2px solid var(--line);
+      background: var(--paper);
+    }
+    .topbar-inner {
+      min-height: 62px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: .65rem;
+      text-decoration: none;
+      font-family: var(--mono);
+      font-size: .9rem;
+      font-weight: 600;
+      letter-spacing: .1em;
+      white-space: nowrap;
+    }
+    .brand-mark {
+      width: 32px;
+      aspect-ratio: 1;
+      display: grid;
+      place-items: center;
+      border: 2px solid var(--ink);
+      background: var(--signal);
+      box-shadow: 3px 3px 0 var(--ink);
+      font-size: .78rem;
+      letter-spacing: 0;
+    }
+    .nav {
+      display: flex;
+      align-items: center;
+      gap: .25rem;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .nav::-webkit-scrollbar { display: none; }
+    .nav a {
+      padding: .55rem .72rem;
+      text-decoration: none;
+      font-family: var(--mono);
+      font-size: .88rem;
+      font-weight: 600;
+      white-space: nowrap;
+      border-bottom: 2px solid transparent;
+    }
+    .nav a:hover { border-color: var(--signal); }
+
+    .hero { padding: clamp(2.75rem, 5vw, 4.5rem) 0 2.5rem; }
+    .eyebrow {
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+      margin: 0 0 1.15rem;
+      font-family: var(--mono);
+      font-size: .86rem;
+      font-weight: 600;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+    .eyebrow::before { content: ""; width: 2.8rem; height: 4px; background: var(--signal); }
+    .hero-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.35fr) minmax(330px, .72fr);
+      gap: clamp(2.5rem, 5vw, 4.5rem);
+      align-items: center;
+    }
+    h1 {
+      margin: 0;
+      max-width: 680px;
+      font-family: var(--serif);
+      font-size: clamp(2.9rem, 4.7vw, 4.7rem);
+      line-height: 1.02;
+      letter-spacing: -.055em;
+      font-weight: 900;
+    }
+    h1 .signal { color: var(--signal); display: block; }
+    .hero-copy {
+      max-width: 660px;
+      margin: 1.55rem 0 0;
+      font-size: clamp(1.05rem, 1.25vw, 1.16rem);
+      line-height: 1.82;
+      color: #394553;
+    }
+    .hero-actions { display: flex; flex-wrap: wrap; gap: .75rem; margin-top: 1.6rem; }
+    .btn {
+      display: inline-flex;
+      justify-content: center;
+      align-items: center;
+      gap: .65rem;
+      min-height: 46px;
+      padding: .62rem 1rem;
+      border: 2px solid var(--ink);
+      background: var(--white);
+      color: var(--ink);
+      box-shadow: 4px 4px 0 var(--ink);
+      text-decoration: none;
+      font-size: 1.02rem;
+      font-weight: 800;
+      transition: transform .16s ease, box-shadow .16s ease, background .16s ease;
+    }
+    .btn:hover { transform: translate(3px,3px); box-shadow: 1px 1px 0 var(--ink); }
+    .btn-primary { background: var(--acid); }
+    .btn-dark { background: var(--ink); color: var(--white); }
+    .btn .arrow { font-family: var(--mono); font-size: 1.1rem; }
+
+    .docket {
+      border: 2px solid var(--ink);
+      background: rgba(255,253,247,.92);
+      box-shadow: var(--shadow);
+      transform: none;
+    }
+    .docket-head {
+      padding: .72rem .9rem;
+      border-bottom: 2px solid var(--ink);
+      background: var(--ink);
+      color: var(--white);
+      font-family: var(--mono);
+      font-size: .76rem;
+      letter-spacing: .12em;
+    }
+    .docket-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: baseline;
+      gap: 1rem;
+      padding: .7rem .9rem;
+      border-bottom: 1px solid var(--ink);
+    }
+    .docket-row:last-child { border-bottom: 0; }
+    .docket-row span { color: var(--muted); font-size: .92rem; }
+    .docket-row strong { font-family: var(--mono); font-size: 1.04rem; }
+    .status-rail {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      margin-top: 2.5rem;
+      border: 2px solid var(--ink);
+      background: var(--white);
+    }
+    .status-cell {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      align-items: center;
+      gap: .75rem;
+      min-height: 64px;
+      padding: .75rem 1rem;
+      border-right: 1px solid var(--ink);
+    }
+    .status-cell:last-child { border-right: 0; }
+    .status-dot { width: 10px; height: 10px; border: 2px solid var(--ink); background: var(--acid); transform: rotate(45deg); }
+    .status-copy { display: grid; gap: .05rem; }
+    .status-key { color: var(--muted); font-family: var(--mono); font-size: .78rem; letter-spacing: .08em; }
+    .status-value { font-size: .98rem; font-weight: 800; }
+    .hero-note {
+      position: relative;
+      margin-top: 1rem;
+      border-left: 5px solid var(--signal);
+      padding: .85rem 1rem;
+      background: var(--paper-deep);
+      font-size: .95rem;
+      color: #46515d;
+    }
+    .hero-note strong { font-family: var(--mono); }
+
+    .section { padding: clamp(3.75rem, 6vw, 5.75rem) 0; border-top: 2px solid var(--ink); }
+    .section-head {
+      display: grid;
+      grid-template-columns: 94px minmax(0, 1fr);
+      gap: 1.25rem;
+      align-items: start;
+      margin-bottom: clamp(2rem, 4vw, 3.25rem);
+    }
+    .section-no {
+      padding-top: .4rem;
+      font-family: var(--mono);
+      font-size: .86rem;
+      font-weight: 600;
+      letter-spacing: .12em;
+      color: var(--signal);
+    }
+    h2 {
+      margin: 0;
+      font-family: var(--serif);
+      font-size: clamp(2.05rem, 3.15vw, 3.3rem);
+      line-height: 1.12;
+      letter-spacing: -.04em;
+    }
+    .section-lead { max-width: 720px; margin: 1rem 0 0; color: #46515d; font-size: 1.06rem; line-height: 1.78; }
+
+    .proof-grid {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 1rem;
+    }
+    .metric-card {
+      position: relative;
+      min-height: 230px;
+      padding: 1.3rem;
+      border: 2px solid var(--ink);
+      background: var(--white);
+    }
+    .metric-card:nth-child(1) { grid-column: span 5; background: var(--acid); }
+    .metric-card:nth-child(2) { grid-column: span 4; }
+    .metric-card:nth-child(3) { grid-column: span 3; background: var(--signal); color: var(--ink); }
+    .metric-label {
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+      font-family: var(--mono);
+      font-size: .84rem;
+      font-weight: 600;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    .metric-value {
+      margin: 2rem 0 .45rem;
+      font-family: var(--mono);
+      font-size: clamp(2.35rem, 3.5vw, 3.4rem);
+      line-height: .94;
+      font-weight: 600;
+      letter-spacing: -.08em;
+    }
+    .metric-card p { margin: 1rem 0 0; max-width: 34ch; font-size: .98rem; }
+    .metric-rule { height: 12px; margin-top: 1.4rem; border: 2px solid var(--ink); background: rgba(255,255,255,.55); }
+    .metric-rule span { display: block; width: var(--fill); height: 100%; background: var(--ink); }
+    .fineprint {
+      margin-top: 1rem;
+      padding: 1rem 1.15rem;
+      border-left: 6px solid var(--signal);
+      background: rgba(255,253,247,.72);
+      color: #4b5662;
+      font-size: .96rem;
+    }
+
+    .bench-wrap { display: grid; grid-template-columns: minmax(0, 1.48fr) minmax(250px, .52fr); gap: 1rem; align-items: stretch; }
+    .figure {
+      margin: 0;
+      padding: 1rem;
+      border: 2px solid var(--ink);
+      background: var(--white);
+      box-shadow: var(--shadow);
+    }
+    .figure img { width: 100%; height: auto; border: 1px solid #aab0b7; }
+    .figure figcaption { padding: .8rem .15rem .1rem; font-size: .92rem; color: var(--muted); }
+    .figure-media { position: relative; display: block; color: inherit; text-decoration: none; overflow: hidden; }
+    .figure-media img { transition: transform .3s ease, filter .3s ease; }
+    .figure-media:hover img { transform: scale(1.012); filter: contrast(1.03); }
+    .figure-zoom { position: absolute; right: .65rem; bottom: .65rem; padding: .38rem .58rem; border: 1px solid var(--ink); background: var(--acid); font-family: var(--mono); font-size: .74rem; font-weight: 600; }
+    .bench-ledger { display: grid; grid-template-rows: repeat(3, 1fr); border: 2px solid var(--ink); background: var(--ink); gap: 2px; }
+    .ledger-item { background: var(--paper); padding: 1.25rem; }
+    .ledger-item strong { display: block; font-family: var(--mono); font-size: clamp(1.6rem, 2.2vw, 2.3rem); line-height: 1.04; }
+    .ledger-item span { display: block; margin-top: .6rem; color: #4d5864; font-size: .98rem; }
+    .ledger-item.accent { background: var(--acid); }
+
+    .pipeline { position: relative; display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; border: 2px solid var(--ink); background: var(--ink); }
+    .stage { min-height: 190px; padding: 1.25rem; background: var(--paper); }
+    .stage-no { font-family: var(--mono); font-size: .82rem; color: var(--signal); }
+    .stage h3 { margin: 1.25rem 0 .65rem; font-size: 1.16rem; line-height: 1.3; }
+    .stage p { margin: 0; max-width: 30ch; font-size: .94rem; line-height: 1.7; color: #4e5964; }
+    .stage::before { content: ""; display: block; width: 12px; height: 12px; border: 3px solid var(--ink); background: var(--acid); transform: rotate(45deg); }
+
+    .case-grid { display: grid; grid-template-columns: minmax(320px, .88fr) minmax(0, 1.12fr); gap: clamp(1.5rem, 5vw, 4rem); align-items: center; }
+    .case-image { position: relative; }
+    .case-image::before { content: "SYNTHETIC / OOD-04"; position: absolute; z-index: 2; top: -1rem; left: -1rem; padding: .5rem .75rem; background: var(--ink); color: white; font-family: var(--mono); font-size: .82rem; }
+    .case-image img { border: 2px solid var(--ink); background: white; box-shadow: var(--shadow); }
+    .case-copy h3 { margin: 0; font-family: var(--serif); font-size: clamp(1.75rem, 2.45vw, 2.45rem); line-height: 1.18; letter-spacing: -.03em; }
+    .case-copy > p { font-size: 1.05rem; line-height: 1.78; }
+    .answer-diff { margin: 2rem 0; border: 2px solid var(--ink); background: var(--white); }
+    .answer-row { display: grid; grid-template-columns: 105px 1fr auto; gap: 1rem; padding: .85rem 1rem; border-bottom: 1px solid var(--ink); align-items: center; }
+    .answer-row:last-child { border: 0; }
+    .answer-row span:first-child { font-family: var(--mono); font-size: .84rem; }
+    .answer-row strong { font-family: var(--mono); font-size: 1.25rem; }
+    .badge { padding: .24rem .58rem; border: 1px solid var(--ink); font-family: var(--mono); font-size: .8rem; }
+    .badge.pass { background: var(--acid); }
+    .badge.fail { background: #ffb7a8; }
+
+    .artifact-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: .85rem; }
+    .artifact {
+      display: grid;
+      grid-template-columns: 50px 1fr auto;
+      align-items: center;
+      gap: 1.1rem;
+      min-height: 138px;
+      padding: 1.1rem;
+      border: 2px solid var(--ink);
+      background: var(--white);
+      text-decoration: none;
+      transition: background .18s ease, transform .18s ease;
+    }
+    .artifact:hover { background: var(--acid); transform: translateY(-4px); }
+    .artifact-code { font-family: var(--mono); font-size: 1.42rem; color: var(--signal); }
+    .artifact h3 { margin: 0 0 .35rem; font-size: 1.1rem; }
+    .artifact p { margin: 0; color: #59636e; font-size: .92rem; line-height: 1.65; }
+    .artifact-arrow { font-family: var(--mono); font-size: 1.4rem; }
+
+    .cta {
+      position: relative;
+      overflow: hidden;
+      padding: clamp(2.25rem, 5vw, 4rem);
+      border: 3px solid var(--ink);
+      background: var(--ink);
+      color: var(--white);
+      box-shadow: 12px 12px 0 var(--signal);
+    }
+    .cta::after {
+      content: "VLM";
+      position: absolute;
+      right: -1rem;
+      bottom: -4.5rem;
+      color: rgba(198,240,77,.15);
+      font-family: var(--mono);
+      font-size: clamp(10rem, 28vw, 25rem);
+      font-weight: 600;
+      line-height: .8;
+      pointer-events: none;
+    }
+    .cta > * { position: relative; z-index: 1; }
+    .cta .eyebrow { color: var(--acid); }
+    .cta h2 { max-width: 700px; }
+    .cta p { max-width: 680px; color: #c5ccd3; font-size: 1.1rem; }
+    .cta .btn { box-shadow: 4px 4px 0 var(--signal); }
+
+    footer { padding: 2.5rem 0 3rem; border-top: 2px solid var(--ink); background: var(--paper-deep); }
+    .footer-grid { display: grid; grid-template-columns: 1fr auto; gap: 2rem; align-items: end; }
+    .footer-title { font-family: var(--mono); font-size: .92rem; font-weight: 600; letter-spacing: .08em; }
+    .footer-meta { margin-top: .5rem; color: #5b6570; font-size: .9rem; }
+    .footer-links { display: flex; flex-wrap: wrap; gap: 1rem; font-family: var(--mono); font-size: .84rem; }
+
+    .js [data-reveal] { opacity: 0; transform: translateY(24px); }
+    .js [data-reveal].is-visible { opacity: 1; transform: none; transition: opacity .65s ease var(--delay, 0ms), transform .65s cubic-bezier(.2,.7,.2,1) var(--delay, 0ms); }
+
+    @media (max-width: 980px) {
+      .hero-grid, .bench-wrap, .case-grid { grid-template-columns: 1fr; }
+      .docket { max-width: 700px; }
+      .metric-card:nth-child(n) { grid-column: span 6; }
+      .metric-card:nth-child(3) { grid-column: span 12; min-height: 220px; }
+      .pipeline { grid-template-columns: repeat(2, 1fr); }
+      .artifact-grid { grid-template-columns: repeat(2, 1fr); }
+      .artifact { grid-template-columns: 62px 1fr auto; }
+    }
+    @media (max-width: 700px) {
+      .shell { width: min(calc(100% - 24px), var(--max)); }
+      .topbar-inner { align-items: stretch; flex-direction: column; padding: .6rem 0; gap: .35rem; }
+      .brand { padding-inline: .25rem; }
+      .nav { margin-inline: -.25rem; }
+      .nav a { padding: .4rem .5rem; }
+      .hero { padding-top: 2.6rem; }
+      h1 { font-size: clamp(2.4rem, 10.5vw, 2.9rem); line-height: 1.07; }
+      .hero-actions .btn { width: 100%; }
+      .status-rail { grid-template-columns: 1fr; }
+      .status-cell { min-height: 56px; border-right: 0; border-bottom: 1px solid var(--ink); }
+      .status-cell:last-child { border-bottom: 0; }
+      .section-head { grid-template-columns: 1fr; gap: .35rem; }
+      h2 { font-size: clamp(1.85rem, 7.9vw, 2.35rem); }
+      .metric-card:nth-child(n) { grid-column: span 12; min-height: 225px; }
+      .pipeline { grid-template-columns: 1fr; }
+      .stage { min-height: 0; padding: 1.1rem 1.2rem 1.35rem; }
+      .artifact-grid { grid-template-columns: 1fr; }
+      .artifact { grid-template-columns: 54px 1fr auto; min-height: 130px; }
+      .answer-row { grid-template-columns: 80px 1fr; }
+      .answer-row .badge { grid-column: 2; justify-self: start; }
+      .footer-grid { grid-template-columns: 1fr; }
+      .footer-links { gap: .75rem; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+      .js [data-reveal] { opacity: 1; transform: none; }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#main">跳至主要內容</a>
+  <header class="topbar">
+    <div class="shell topbar-inner">
+      <a class="brand" href="#top" aria-label="回到頁首"><span class="brand-mark">08B</span>CHART/OPS · QWEN3-VL</a>
+      <nav class="nav" aria-label="頁面導覽">
+        <a href="#proof">結果</a><a href="#benchmark">效能</a><a href="#pipeline">流程</a><a href="#case">案例</a><a href="#artifacts">產物</a><a href="#demo">Demo</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="hero" id="top">
+      <div class="shell">
+        <p class="eyebrow" data-reveal>Visual analysis terminal / 2026</p>
+        <div class="hero-grid">
+          <div>
+            <h1 data-reveal style="--delay:80ms">問圖表，<span class="signal">讓數據回答。</span></h1>
+            <p class="hero-copy" data-reveal style="--delay:160ms">從 15,000 筆 ChartQA QLoRA fine-tuning，到完整 2,500 題品質驗證、AWQ 量化與 A100 vLLM serving benchmark。每個部署決策，都有數據可以追溯。</p>
+            <div class="hero-actions" data-reveal style="--delay:240ms">
+              <a class="btn btn-primary" href="https://colab.research.google.com/#fileId=https://huggingface.co/spaces/steven0226/qwen3vl-chartqa-demo/blob/main/demo_gradio_colab.ipynb" target="_blank" rel="noopener"><span>在 Colab 啟動 Demo</span><span class="arrow">↗</span></a>
+              <a class="btn" href="https://huggingface.co/steven0226/qwen3vl-8b-chartqa-awq" target="_blank" rel="noopener"><span>查看 AWQ 模型</span><span class="arrow">→</span></a>
+            </div>
+          </div>
+          <aside class="docket" data-reveal style="--delay:180ms" aria-label="專案摘要">
+            <div class="docket-head">EVIDENCE DOCKET / FINAL</div>
+            <div class="docket-row"><span>Fine-tuning</span><strong>QLoRA · 15K</strong></div>
+            <div class="docket-row"><span>AWQ accuracy</span><strong>85.52%</strong></div>
+            <div class="docket-row"><span>Quality change</span><strong>−0.72 pp</strong></div>
+            <div class="docket-row"><span>Serving</span><strong>vLLM · A100</strong></div>
+            <div class="docket-row"><span>Portable runtime</span><strong>GGUF · Q4_K_M</strong></div>
+          </aside>
+        </div>
+        <div class="status-rail" data-reveal>
+          <div class="status-cell"><span class="status-dot"></span><span class="status-copy"><span class="status-key">PROJECT STATUS</span><strong class="status-value">Phase 6 · Complete</strong></span></div>
+          <div class="status-cell"><span class="status-dot"></span><span class="status-copy"><span class="status-key">PUBLIC SPACE</span><strong class="status-value">Static · Running</strong></span></div>
+          <div class="status-cell"><span class="status-dot"></span><span class="status-copy"><span class="status-key">LIVE INFERENCE</span><strong class="status-value">Colab · A100</strong></span></div>
+        </div>
+        <div class="hero-note" data-reveal>
+          <strong>執行說明：</strong>這是免費、持久的成果展示頁，不會在瀏覽器偷偷下載 8B 權重。互動推論請開啟上方 notebook，在 Colab 選擇 A100 後按「全部執行」。
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="proof">
+      <div class="shell">
+        <div class="section-head">
+          <div class="section-no">01 / PROOF</div>
+          <div><h2 data-reveal>量化不是猜測，<br>是有門檻的決策。</h2><p class="section-lead" data-reveal>AWQ 必須在完整 ChartQA test set 上，相對 merged 16-bit 掉分不超過 2 個百分點，才能進入 serving benchmark。</p></div>
+        </div>
+        <div class="proof-grid">
+          <article class="metric-card" data-reveal>
+            <div class="metric-label"><span>AWQ overall</span><span>n = 2,500</span></div>
+            <div class="metric-value">85.52%</div>
+            <p>完整 human + augmented test set 的正式 relaxed accuracy。</p>
+            <div class="metric-rule" aria-label="85.52 percent"><span style="--fill:85.52%"></span></div>
+          </article>
+          <article class="metric-card" data-reveal style="--delay:90ms">
+            <div class="metric-label"><span>Quantization Δ</span><span>PASS</span></div>
+            <div class="metric-value">−0.72<span style="font-size:.36em;letter-spacing:0"> pp</span></div>
+            <p>低於預先定義的 −2 pp 品質門檻；paired bootstrap 95% CI 為 [−1.40, −0.04] pp。</p>
+          </article>
+          <article class="metric-card" data-reveal style="--delay:180ms">
+            <div class="metric-label"><span>Weight files</span><span>−56.9%</span></div>
+            <div class="metric-value">7.55<span style="font-size:.36em;letter-spacing:0"> GB</span></div>
+            <p>由 merged 16-bit 的 17.53 GB 壓縮至 AWQ W4A16 g32。</p>
+          </article>
+        </div>
+        <div class="fineprint">註：微調前後表與 merged/AWQ 量化表使用不同的 paired evaluation stack，分數只在各自表內比較，不跨 stack 排名。</div>
+      </div>
+    </section>
+
+    <section class="section" id="benchmark">
+      <div class="shell">
+        <div class="section-head">
+          <div class="section-no">02 / SERVING</div>
+          <div><h2 data-reveal>壓縮之後，<br>速度真的變快。</h2><p class="section-lead" data-reveal>同一張 A100-SXM4-40GB、同一組多模態 workload、固定 64-token decode；merged 16-bit 與 AWQ 各測 concurrency 1／4／8／16，8 組全部 64/64 成功。</p></div>
+        </div>
+        <div class="bench-wrap">
+          <figure class="figure" data-reveal>
+            <a class="figure-media" href="assets/latency_throughput.png" target="_blank" rel="noopener" aria-label="開啟完整尺寸 benchmark 圖表">
+              <img src="assets/latency_throughput.png" width="2048" height="568" alt="Merged 16-bit 與 AWQ 在不同 concurrency 的 output throughput、TTFT p95 和 TPOT p95 曲線">
+              <span class="figure-zoom" aria-hidden="true">FULL SIZE ↗</span>
+            </a>
+            <figcaption>Run v2-aa4442870cfd · vLLM 0.25.1+cu129 · measured-window JIT gate PASS</figcaption>
+          </figure>
+          <div class="bench-ledger" data-reveal style="--delay:100ms">
+            <div class="ledger-item accent"><strong>+83.2%</strong><span>concurrency 1 output throughput</span></div>
+            <div class="ledger-item"><strong>−51.9%</strong><span>concurrency 1 TPOT p95</span></div>
+            <div class="ledger-item"><strong>701.9</strong><span>tokens/s at concurrency 16</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="pipeline">
+      <div class="shell">
+        <div class="section-head">
+          <div class="section-no">03 / PIPELINE</div>
+          <div><h2 data-reveal>從資料到部署，<br>完整走完一輪。</h2><p class="section-lead" data-reveal>訓練、評估、量化與 serving 各自隔離，產物透過 pinned revision 銜接，避免把環境差異誤認為模型改善。</p></div>
+        </div>
+        <div class="pipeline" data-reveal>
+          <article class="stage"><div class="stage-no">01</div><h3>ChartQA 資料</h3><p>15,000 筆 train；human／augmented 分層保留。</p></article>
+          <article class="stage"><div class="stage-no">02</div><h3>QLoRA 微調</h3><p>Qwen3-VL-8B · rank 16 · 1 epoch · A100。</p></article>
+          <article class="stage"><div class="stage-no">03</div><h3>完整評估</h3><p>2,500 題 relaxed accuracy 與不含內容的逐題正確性證據。</p></article>
+          <article class="stage"><div class="stage-no">04</div><h3>AWQ W4A16</h3><p>group size 32；vision tower 與 lm_head 保持原精度。</p></article>
+          <article class="stage"><div class="stage-no">05</div><h3>vLLM Benchmark</h3><p>快取隔離、獨立 server、固定 workload 與 validity gate。</p></article>
+          <article class="stage"><div class="stage-no">06</div><h3>GGUF 發布</h3><p>Q4_K_M text + Q8_0 mmproj；llama.cpp CPU smoke PASS。</p></article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="case">
+      <div class="shell">
+        <div class="section-head">
+          <div class="section-no">04 / CASE</div>
+          <div><h2 data-reveal>安全公開，<br>不靠資料集截圖。</h2></div>
+        </div>
+        <div class="case-grid">
+          <div class="case-image" data-reveal><img src="assets/synthetic_ood_04.png" width="1000" height="700" alt="完全由本專案生成的合成堆疊長條圖"></div>
+          <div class="case-copy" data-reveal style="--delay:120ms">
+            <h3>公開示範，<br>只用自製合成圖表。</h3>
+            <p>這張堆疊長條圖由本 repository 的 deterministic generator 產生，用來展示算術型圖表問答輸入，不包含 ChartQA 影像、題目、標籤或模型輸出。</p>
+            <div class="answer-diff">
+              <div class="answer-row"><span>SOURCE</span><strong>synthetic-ood-v1</strong><span class="badge pass">OWNED</span></div>
+              <div class="answer-row"><span>SKILL</span><strong>arithmetic</strong><span class="badge pass">OOD</span></div>
+              <div class="answer-row"><span>LICENSE</span><strong>MIT</strong><span class="badge pass">PUBLIC</span></div>
+            </div>
+            <p class="fineprint">模型完整品質結論來自 2,500 題 aggregate metrics 與內容無關的 per-item correctness evidence；這張圖只是可安全公開的 UI 範例，不冒充額外 benchmark。</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="artifacts">
+      <div class="shell">
+        <div class="section-head">
+          <div class="section-no">05 / ARTIFACTS</div>
+          <div><h2 data-reveal>每一階段，<br>都有可追溯產物。</h2><p class="section-lead" data-reveal>模型、量化權重、完整評估與 benchmark 都保存在 Hugging Face Hub；不是只有一張結果截圖。</p></div>
+        </div>
+        <div class="artifact-grid">
+          <a class="artifact" data-reveal href="https://huggingface.co/steven0226/qwen3vl-8b-chartqa-lora" target="_blank" rel="noopener"><span class="artifact-code">L</span><span><h3>LoRA Adapter</h3><p>QLoRA 訓練輸出與 PEFT 重用。</p></span><span class="artifact-arrow">↗</span></a>
+          <a class="artifact" data-reveal style="--delay:70ms" href="https://huggingface.co/steven0226/qwen3vl-8b-chartqa-merged-16bit" target="_blank" rel="noopener"><span class="artifact-code">16</span><span><h3>Merged 16-bit</h3><p>品質參考與 full-precision baseline。</p></span><span class="artifact-arrow">↗</span></a>
+          <a class="artifact" data-reveal href="https://huggingface.co/steven0226/qwen3vl-8b-chartqa-awq" target="_blank" rel="noopener"><span class="artifact-code">W4</span><span><h3>AWQ W4A16 g32</h3><p>正式 accuracy 與 A100 serving 產物。</p></span><span class="artifact-arrow">↗</span></a>
+          <a class="artifact" data-reveal style="--delay:70ms" href="https://huggingface.co/steven0226/qwen3vl-8b-chartqa-gguf" target="_blank" rel="noopener"><span class="artifact-code">GG</span><span><h3>GGUF Q4_K_M</h3><p>5.03 GB text model + 752 MB mmproj。</p></span><span class="artifact-arrow">↗</span></a>
+          <a class="artifact" data-reveal href="https://github.com/kuotunyu/qwen3-vl-chartqa/tree/main/assets/eval_quant" target="_blank" rel="noopener"><span class="artifact-code">QA</span><span><h3>Full Test Evaluation</h3><p>2,500 題 aggregate metrics 與不含原始內容的逐題正確性證據。</p></span><span class="artifact-arrow">↗</span></a>
+          <a class="artifact" data-reveal style="--delay:70ms" href="https://huggingface.co/steven0226/qwen3vl-8b-chartqa-awq/tree/main/bench" target="_blank" rel="noopener"><span class="artifact-code">B</span><span><h3>Serving Benchmark</h3><p>結果、workload manifest、圖表與 checkpoints。</p></span><span class="artifact-arrow">↗</span></a>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="demo">
+      <div class="shell">
+        <div class="cta" data-reveal>
+          <p class="eyebrow">LIVE INFERENCE / COLAB A100</p>
+          <h2>把你的圖表<br>交給模型讀。</h2>
+          <p>開啟 notebook 後選擇 A100 runtime，確認 Colab Secret 已設定 `HF_TOKEN`，再按「全部執行」。最後一格會產生暫時的 Gradio 分享網址。</p>
+          <div class="hero-actions">
+            <a class="btn btn-primary" href="https://colab.research.google.com/#fileId=https://huggingface.co/spaces/steven0226/qwen3vl-chartqa-demo/blob/main/demo_gradio_colab.ipynb" target="_blank" rel="noopener"><span>開啟 Demo Notebook</span><span class="arrow">↗</span></a>
+            <a class="btn btn-dark" href="https://huggingface.co/HuggingFaceM4/ChartQA" target="_blank" rel="noopener"><span>查看 ChartQA Dataset</span><span class="arrow">→</span></a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="shell footer-grid">
+      <div><div class="footer-title">QWEN3-VL CHARTQA / EVIDENCE-FIRST VLM</div><div class="footer-meta">GGUF revision 5e5860f5d406 · AWQ revision 43b71926a1d6 · Benchmark run v2-aa4442870cfd</div></div>
+      <div class="footer-links"><a href="#top">回到頁首 ↑</a><a href="https://huggingface.co/steven0226" target="_blank" rel="noopener">HF Profile ↗</a></div>
+    </div>
+  </footer>
+
+  <script>
+    (() => {
+      const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const items = document.querySelectorAll('[data-reveal]');
+      if (reduced || !('IntersectionObserver' in window)) {
+        items.forEach((item) => item.classList.add('is-visible'));
+        return;
+      }
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+          entry.target.classList.add('is-visible');
+          observer.unobserve(entry.target);
+        });
+      }, { threshold: 0.12, rootMargin: '0px 0px -6% 0px' });
+      items.forEach((item) => observer.observe(item));
+    })();
+  </script>
+</body>
+</html>

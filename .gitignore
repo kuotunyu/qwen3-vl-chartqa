@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.python-version
+
+# uv
+uv.lock.bak
+
+# Data & weights (never commit — pulled via HF Hub / scripts)
+data/
+*.safetensors
+*.bin
+*.gguf
+*.pt
+*.pth
+checkpoints/
+outputs/
+runs/
+
+# HF cache if pointed locally
+.hf_cache/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Env / secrets
+.env
+*.token
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+.vscode/
+.idea/
+
+# Isolated development worktrees
+.worktrees/
