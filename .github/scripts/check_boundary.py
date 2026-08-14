@@ -111,14 +111,20 @@ def main() -> int:
                 f"(limit {MAX_TRACKED_BYTES}) — weights and datasets belong on the Hub"
             )
 
+    ALLOWED_BOT_IDENTITIES = {
+        "GitHub <noreply@github.com>",
+        "dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>",
+        "github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>",
+    }
     identities = {
         line
         for line in git("log", "--all", "--format=%an <%ae>").splitlines()
         + git("log", "--all", "--format=%cn <%ce>").splitlines()
         if line
     }
-    if identities != {EXPECTED_IDENTITY}:
-        findings.append(f"unexpected commit identities: {sorted(identities)}")
+    human_identities = identities - ALLOWED_BOT_IDENTITIES
+    if human_identities != {EXPECTED_IDENTITY}:
+        findings.append(f"unexpected commit identities: {sorted(human_identities)}")
 
     remotes = git("remote").split()
     print(f"identities: {sorted(identities)}")
