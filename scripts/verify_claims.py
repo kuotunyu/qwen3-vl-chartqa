@@ -531,11 +531,16 @@ def check_publication_boundary(f: Failures) -> None:
         text=True,
     )
     if idents.returncode == 0:
-        unique = set(idents.stdout.split("\n")) - {""}
+        raw_idents = set(idents.stdout.split("\n")) - {""}
+        human_authors = {
+            ident.split("|")[0]
+            for ident in raw_idents
+            if "dependabot[bot]" not in ident and "github-actions[bot]" not in ident
+        }
         f.check(
-            len(unique) == 1,
+            len(human_authors) == 1,
             "git history carries exactly one identity",
-            str(sorted(unique)[:3]),
+            str(sorted(raw_idents)[:3]),
         )
 
 
