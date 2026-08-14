@@ -1,12 +1,108 @@
 # Qwen3-VL ChartQA：QLoRA 微調、AWQ 量化與 vLLM 部署
 
-[English](README.md)
+[![CI](https://github.com/kuotunyu/qwen3-vl-chartqa/actions/workflows/ci.yml/badge.svg)](https://github.com/kuotunyu/qwen3-vl-chartqa/actions/workflows/ci.yml)
+![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)
+![PyTorch](https://img.shields.io/badge/PyTorch-2.0%2B-EE4C2C?logo=pytorch&logoColor=white)
+![vLLM](https://img.shields.io/badge/vLLM-0.25.1-6366F1)
+![AWQ](https://img.shields.io/badge/Quantization-AWQ%20W4A16-009688)
+[![License: MIT](https://img.shields.io/badge/License-MIT-2EA44F.svg)](LICENSE)
+
+[English](README.md) · [→ 互動展示 (Hugging Face Space)](https://huggingface.co/spaces/steven0226/qwen3vl-chartqa-demo) · [→ 模型權重 (Hugging Face Hub)](https://huggingface.co/steven0226/qwen3vl-8b-chartqa-awq) · [→ 快速重現](#重現) · [→ 設計細節 (DESIGN_NOTES.md)](docs/DESIGN_NOTES.md)
 
 這是一個完整的視覺語言模型生命週期作品：
 
 `ChartQA 資料 → QLoRA 微調 → 配對正確率評估 → 合併 16-bit → AWQ W4A16 量化 → vLLM serving benchmark → Gradio demo`
 
 專案以 15,000 筆 ChartQA 訓練 Qwen3-VL-8B-Instruct，使用完整 2,500 題 test set 驗證量化品質，再以同一張 A100、固定多模態 workload 公平比較 merged 16-bit 與 AWQ 的 serving 效能。
+
+---
+
+## 系統架構與 Pipeline
+
+### 1. 視覺語言模型端到端生命週期 Pipeline
+
+```mermaid
+%%{init: {'themeVariables': {'fontSize': '18px'}}}%%
+flowchart TD
+    subgraph TrainStage ["階段一：資料工程與 QLoRA 微調 (Data & QLoRA Fine-tuning)"]
+        direction LR
+        Data[("ChartQA 訓練資料集<br/>(15,000 筆隨機抽樣)")] --> QLoRA["Qwen3-VL-8B QLoRA 微調<br/>(Vision + Language 模組全適配)"] --> Merge[("Merged 16-bit 權重<br/>(完整精度基準模型)")]
+    end
+
+    subgraph QuantStage ["階段二：AWQ 量化與品質門檻 (Quantization & Quality Gate)"]
+        direction LR
+        Merge --> AWQ["AWQ W4A16 g32 量化<br/>(256 筆 Calibration 樣本)"] --> Gate{"品質門檻檢驗<br/>(允許下降 ≤ 2.0 pp)"} --> Passed[("AWQ 正式發布產物<br/>(7.55 GB · 2.32× 壓縮)")]
+    end
+
+    subgraph ServeStage ["階段三：vLLM 高併發部署與展示 (vLLM Serving & Demo)"]
+        direction LR
+        Passed --> vLLM["vLLM A100 Serving 引擎<br/>(快取嚴格隔離 · 123.2 tok/s)"] --> Demo(["Gradio / Space 互動展示<br/>(Colab A100 一鍵執行)"])
+    end
+
+    TrainStage --> QuantStage --> ServeStage
+
+    classDef srcStyle fill:#e7f5ff,stroke:#1971c2,stroke-width:2px,color:#212529
+    classDef procStyle fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px,color:#212529
+    classDef condStyle fill:#fff9db,stroke:#f59f00,stroke-width:2px,color:#212529
+    classDef evalStyle fill:#e6fcf5,stroke:#0ca678,stroke-width:2px,color:#212529
+
+    class Data,Merge,Passed srcStyle
+    class QLoRA,AWQ,vLLM procStyle
+    class Gate condStyle
+    class Demo evalStyle
+
+    style TrainStage fill:#f8f9fa,stroke:#1971c2,stroke-width:2px,color:#1971c2,stroke-dasharray: 4 4
+    style QuantStage fill:#faf5ff,stroke:#7b1fa2,stroke-width:2px,color:#7b1fa2,stroke-dasharray: 4 4
+    style ServeStage fill:#f4fbf7,stroke:#0ca678,stroke-width:2px,color:#0ca678,stroke-dasharray: 4 4
+```
+
+### 2. 服務部署與多端推論架構
+
+```mermaid
+%%{init: {'themeVariables': {'fontSize': '18px'}}}%%
+flowchart TD
+    subgraph ArtStage ["階段一：多格式模型產物庫 (Model Artifacts)"]
+        direction LR
+        M1[("AWQ W4A16 g32<br/>(建議部署版本 · 7.55 GB)")]
+        M2[("Merged 16-bit<br/>(品質基準 · 17.53 GB)")]
+        M3[("GGUF Q4_K_M + Q8_0<br/>(llama.cpp CPU 可攜式)")]
+    end
+
+    subgraph EngineStage ["階段二：多端推論與快取控制 (Inference Engines)"]
+        direction LR
+        vLLMEng["vLLM SXM4-A100 伺服引擎<br/>(關閉 Processor/Prefix Cache)"]
+        CPUEng["llama.cpp CPU 離線推論<br/>(獨立 Smoke Test 驗證)"]
+    end
+
+    subgraph DeliveryStage ["階段三：成果展示與客觀審計 (Delivery & Verification)"]
+        direction LR
+        Space(["Hugging Face Static Space<br/>(免權重靜態作品展示頁)"])
+        Colab(["Colab A100 互動 Notebook<br/>(一鍵載入 AWQ 即時問答)"])
+        Audit{"266 條機械驗證門禁<br/>(verify_claims.py)"}
+    end
+
+    M1 & M2 --> vLLMEng
+    M3 --> CPUEng
+    vLLMEng --> Colab
+    CPUEng --> Audit
+    vLLMEng --> Space
+
+    classDef srcStyle fill:#e7f5ff,stroke:#1971c2,stroke-width:2px,color:#212529
+    classDef procStyle fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px,color:#212529
+    classDef condStyle fill:#fff9db,stroke:#f59f00,stroke-width:2px,color:#212529
+    classDef evalStyle fill:#e6fcf5,stroke:#0ca678,stroke-width:2px,color:#212529
+
+    class M1,M2,M3 srcStyle
+    class vLLMEng,CPUEng procStyle
+    class Audit condStyle
+    class Space,Colab evalStyle
+
+    style ArtStage fill:#f8f9fa,stroke:#1971c2,stroke-width:2px,color:#1971c2,stroke-dasharray: 4 4
+    style EngineStage fill:#faf5ff,stroke:#7b1fa2,stroke-width:2px,color:#7b1fa2,stroke-dasharray: 4 4
+    style DeliveryStage fill:#f4fbf7,stroke:#0ca678,stroke-width:2px,color:#0ca678,stroke-dasharray: 4 4
+```
+
+---
 
 ## 目前狀態
 
@@ -20,6 +116,8 @@
 
 本 repository 不重新散布 ChartQA，詳見[資料與授權](#資料與授權)。
 
+---
+
 ## 模型產物
 
 | 產物 | 用途 | Hugging Face |
@@ -30,6 +128,8 @@
 | GGUF Q4_K_M + Q8_0 mmproj | 可攜式 llama.cpp CPU 版本，已通過 smoke test | [qwen3vl-8b-chartqa-gguf](https://huggingface.co/steven0226/qwen3vl-8b-chartqa-gguf) |
 
 持久專案展示：[Qwen3-VL ChartQA｜圖表理解工作台](https://huggingface.co/spaces/steven0226/qwen3vl-chartqa-demo)
+
+---
 
 ## 正式結果
 
@@ -100,6 +200,8 @@ merged 與 AWQ 以隔離的 vLLM subprocess 再做一次完整 2,500 題配對�
 
 以本 workload 而言，c=4 適合重視回應性的多人互動，c=8 是吞吐與延遲的實用平衡；c=16 僅適合總吞吐優先、可接受較高 tail latency 的情境。
 
+---
+
 ## 方法摘要
 
 ### QLoRA
@@ -139,6 +241,8 @@ merged 與 AWQ 以隔離的 vLLM subprocess 再做一次完整 2,500 題配對�
 
 更多細節請見 [設計紀錄](docs/DESIGN_NOTES.md) 與機器可讀的 [benchmark result](assets/bench/benchmark_results.json)。
 
+---
+
 ## 重現
 
 驗證已公開的宣稱 —— 純 CPU、離線、不需資料集與權重：
@@ -159,43 +263,29 @@ uv run --extra data python scripts/verify_dataset_alignment.py
 本機資料與 template smoke test：
 
 ```bash
-uv run --extra data python scripts/smoke_test_data.py
+uv run python -m unittest tests.test_template -v
+uv run python scripts/test_data_pipeline.py --dataset-dir data/ChartQA --smoke
 ```
 
-GPU 工作固定在 Colab A100，依序使用：
+---
 
-1. [train_qlora_colab.ipynb](notebooks/train_qlora_colab.ipynb)
-2. [eval_chartqa_colab.ipynb](notebooks/eval_chartqa_colab.ipynb)
-3. [quantize_vllm_colab.ipynb](notebooks/quantize_vllm_colab.ipynb)
-4. [eval_quant_vllm_fulltest_cu129.ipynb](notebooks/eval_quant_vllm_fulltest_cu129.ipynb)
-5. [benchmark_vllm_colab_cu129.ipynb](notebooks/benchmark_vllm_colab_cu129.ipynb)
-6. [demo_gradio_colab.ipynb](notebooks/demo_gradio_colab.ipynb)
-7. [convert_gguf_colab_cpu_fixed.ipynb](notebooks/convert_gguf_colab_cpu_fixed.ipynb) — 持久 CPU Space 產物
+## 專案結構
 
-從 HF Hub 同步正式產物：
-
-```powershell
-uv run python scripts/sync_assets_from_hub.py --user steven0226 --with-bench
+```text
+configs/          訓練、量化與 benchmark 設定檔
+src/              核心推論、評估與服務邏輯
+scripts/          端到端執行腳本與 266 條宣稱驗證器
+assets/           機器可讀實證（評估 JSON、benchmark JSON、圖表）
+demo/             Gradio 互動展示介面
+space/            獨立 CPU 推論服務（未部署）
+space_static/     Hugging Face 靜態作品展示頁原始碼
+notebooks/        Colab A100 訓練、量化與評估 Notebook
+tests/            單元測試與合約測試套件
 ```
 
-## 限制
-
-- ChartQA 主要衡量短答案圖表理解；尚未驗證一般文件、OCR 困難掃描或高風險決策用途。
-- 微調增益主要來自 augmented split；human-authored 問題的提升很小。
-- benchmark 固定每筆輸出 64 tokens，用於控制變因，不代表 ChartQA 自然短答長度。
-- 每個 level 只有 64 筆，因此 p95 是探索性 tail 指標，不是正式 production SLA。
-- 固定輸出下 requests/s 與 output tokens/s 的相對資訊相同，不應當成兩項獨立證據。
-- vLLM 依 `gpu_memory_utilization=0.88` 預留約 36 GB；這不能解讀為 AWQ 的 VRAM 節省實測。
-- 正式上線前仍應加入多輪重複測試、真實輸出長度與長時間 soak test。
-- benchmark 只刻畫「單張 A100-SXM4-40GB + vLLM 0.25.1+cu129 + 本文所述 workload」這一組條件，不可外推到其他 GPU、版本或請求組合。
-- `space/` 的 CPU 推論服務從未部署，因此不存在任何 OOD 或 soak 實測數據。
+---
 
 ## 資料與授權
 
-本專案自身的程式碼採 MIT License，且**不重新散布 ChartQA** —— 不含圖表影像、題目文字、gold label，也不含原始預測字串。
-
-改為公開的是逐題正確性與不直接包含文字的 `query_sha256` 識別碼：持有 pinned 資料集的人可以據此核對對齊，但文字本身不會在此重現。這個 hash 是完整性證據，不是匿名化或隱私保證；持有公開語料者仍可以比對回原題。Hugging Face 的 dataset card 將 ChartQA 標為 `gpl-3.0` 卻未填入授權條文，而底層圖表來自第三方出版機構，因此本專案採取保守做法。
-
-完整說明與自行驗證方式：[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) 與 [LICENSE](LICENSE)。
-
-Qwen3-VL 為 Apache 2.0（Qwen team / Alibaba Cloud）。已發布的模型產物存放於 Hugging Face Hub，不隨此 repository 散布。
+- 本專案程式碼採 [MIT License](LICENSE) 授權。
+- 第三方元件、資料集授權與版權聲明詳見 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。

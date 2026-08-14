@@ -1,12 +1,108 @@
 # Qwen3-VL ChartQA: QLoRA, AWQ Quantization, and vLLM Serving
 
-[繁體中文](README.zh-TW.md)
+[![CI](https://github.com/kuotunyu/qwen3-vl-chartqa/actions/workflows/ci.yml/badge.svg)](https://github.com/kuotunyu/qwen3-vl-chartqa/actions/workflows/ci.yml)
+![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)
+![PyTorch](https://img.shields.io/badge/PyTorch-2.0%2B-EE4C2C?logo=pytorch&logoColor=white)
+![vLLM](https://img.shields.io/badge/vLLM-0.25.1-6366F1)
+![AWQ](https://img.shields.io/badge/Quantization-AWQ%20W4A16-009688)
+[![License: MIT](https://img.shields.io/badge/License-MIT-2EA44F.svg)](LICENSE)
+
+[繁體中文](README.zh-TW.md) · [→ Interactive Space](https://huggingface.co/spaces/steven0226/qwen3vl-chartqa-demo) · [→ Model Weights](https://huggingface.co/steven0226/qwen3vl-8b-chartqa-awq) · [→ Reproduce](#reproduce) · [→ Design Notes](docs/DESIGN_NOTES.md)
 
 An end-to-end vision-language model project for chart question answering:
 
 `ChartQA data → QLoRA fine-tuning → paired accuracy evaluation → 16-bit merge → AWQ W4A16 quantization → vLLM serving benchmark → Gradio demo`
 
 The project fine-tunes Qwen3-VL-8B-Instruct on 15,000 ChartQA examples, validates the quantized model on the complete 2,500-question test set, and benchmarks the merged and AWQ models on the same A100 GPU with a cache-controlled multimodal workload.
+
+---
+
+## System Architecture & Pipeline
+
+### 1. Vision-Language Model Lifecycle Pipeline
+
+```mermaid
+%%{init: {'themeVariables': {'fontSize': '18px'}}}%%
+flowchart TD
+    subgraph TrainStage ["Phase 1: Data Engineering & QLoRA Fine-tuning"]
+        direction LR
+        Data[("ChartQA Training Dataset<br/>(15,000 sampled examples)")] --> QLoRA["Qwen3-VL-8B QLoRA Tuning<br/>(Vision + Language adaptation)"] --> Merge[("Merged 16-bit Weights<br/>(Full-precision baseline)")]
+    end
+
+    subgraph QuantStage ["Phase 2: AWQ Quantization & Quality Gate"]
+        direction LR
+        Merge --> AWQ["AWQ W4A16 g32 Quantization<br/>(256 calibration samples)"] --> Gate{"Quality Gate Validation<br/>(Allowable drop ≤ 2.0 pp)"} --> Passed[("AWQ Release Artifact<br/>(7.55 GB · 2.32× compression)")]
+    end
+
+    subgraph ServeStage ["Phase 3: vLLM High-Concurrency Serving & Demo"]
+        direction LR
+        Passed --> vLLM["vLLM A100 Serving Engine<br/>(Strict cache control · 123.2 tok/s)"] --> Demo(["Gradio / Space Demo<br/>(Colab A100 execution)"])
+    end
+
+    TrainStage --> QuantStage --> ServeStage
+
+    classDef srcStyle fill:#e7f5ff,stroke:#1971c2,stroke-width:2px,color:#212529
+    classDef procStyle fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px,color:#212529
+    classDef condStyle fill:#fff9db,stroke:#f59f00,stroke-width:2px,color:#212529
+    classDef evalStyle fill:#e6fcf5,stroke:#0ca678,stroke-width:2px,color:#212529
+
+    class Data,Merge,Passed srcStyle
+    class QLoRA,AWQ,vLLM procStyle
+    class Gate condStyle
+    class Demo evalStyle
+
+    style TrainStage fill:#f8f9fa,stroke:#1971c2,stroke-width:2px,color:#1971c2,stroke-dasharray: 4 4
+    style QuantStage fill:#faf5ff,stroke:#7b1fa2,stroke-width:2px,color:#7b1fa2,stroke-dasharray: 4 4
+    style ServeStage fill:#f4fbf7,stroke:#0ca678,stroke-width:2px,color:#0ca678,stroke-dasharray: 4 4
+```
+
+### 2. Multi-Target Serving Architecture
+
+```mermaid
+%%{init: {'themeVariables': {'fontSize': '18px'}}}%%
+flowchart TD
+    subgraph ArtStage ["Phase 1: Multi-Format Model Artifacts"]
+        direction LR
+        M1[("AWQ W4A16 g32<br/>(Recommended release · 7.55 GB)")]
+        M2[("Merged 16-bit<br/>(Quality baseline · 17.53 GB)")]
+        M3[("GGUF Q4_K_M + Q8_0<br/>(llama.cpp CPU portable)")]
+    end
+
+    subgraph EngineStage ["Phase 2: Multi-Target Inference Engines"]
+        direction LR
+        vLLMEng["vLLM SXM4-A100 Serving<br/>(Processor & Prefix Cache disabled)"]
+        CPUEng["llama.cpp CPU Offline Inference<br/>(Independent smoke test passed)"]
+    end
+
+    subgraph DeliveryStage ["Phase 3: Delivery & Verification Gates"]
+        direction LR
+        Space(["Hugging Face Static Space<br/>(Evidence-only static showcase)"])
+        Colab(["Colab A100 Interactive Notebook<br/>(One-click AWQ live serving)"])
+        Audit{"266 Claim Check Gates<br/>(verify_claims.py)"}
+    end
+
+    M1 & M2 --> vLLMEng
+    M3 --> CPUEng
+    vLLMEng --> Colab
+    CPUEng --> Audit
+    vLLMEng --> Space
+
+    classDef srcStyle fill:#e7f5ff,stroke:#1971c2,stroke-width:2px,color:#212529
+    classDef procStyle fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px,color:#212529
+    classDef condStyle fill:#fff9db,stroke:#f59f00,stroke-width:2px,color:#212529
+    classDef evalStyle fill:#e6fcf5,stroke:#0ca678,stroke-width:2px,color:#212529
+
+    class M1,M2,M3 srcStyle
+    class vLLMEng,CPUEng procStyle
+    class Audit condStyle
+    class Space,Colab evalStyle
+
+    style ArtStage fill:#f8f9fa,stroke:#1971c2,stroke-width:2px,color:#1971c2,stroke-dasharray: 4 4
+    style EngineStage fill:#faf5ff,stroke:#7b1fa2,stroke-width:2px,color:#7b1fa2,stroke-dasharray: 4 4
+    style DeliveryStage fill:#f4fbf7,stroke:#0ca678,stroke-width:2px,color:#0ca678,stroke-dasharray: 4 4
+```
+
+---
 
 ## Status
 
@@ -20,6 +116,8 @@ The planned scope is complete and feature-frozen. Training, evaluation, quantiza
 
 This repository does not redistribute ChartQA. See [Data and licensing](#data-and-licensing).
 
+---
+
 ## Model artifacts
 
 | Artifact | Purpose | Hugging Face |
@@ -31,6 +129,8 @@ This repository does not redistribute ChartQA. See [Data and licensing](#data-an
 
 Persistent project showcase: [Qwen3-VL ChartQA｜圖表理解工作台](https://huggingface.co/spaces/steven0226/qwen3vl-chartqa-demo)
 
+---
+
 ## Results
 
 Every number below is recomputed from the evidence in `assets/` on each CI run:
@@ -39,9 +139,7 @@ Every number below is recomputed from the evidence in `assets/` on each CI run:
 python scripts/verify_claims.py
 ```
 
-It parses the tables in both READMEs, recomputes each accuracy from per-item
-correctness, re-derives the compression and latency deltas from the benchmark
-JSON, re-checks the evidence SHA-256 chain, and fails if anything drifts.
+It parses the tables in both READMEs, recomputes each accuracy from per-item correctness, re-derives the compression and latency deltas from the benchmark JSON, re-checks the evidence SHA-256 chain, and fails if anything drifts.
 
 | Claim | Evidence |
 |---|---|
@@ -102,6 +200,8 @@ Compared with merged 16-bit, AWQ:
 
 For this workload, concurrency 4 is a responsive multi-user setting, concurrency 8 is a practical throughput/latency balance, and concurrency 16 is appropriate only when aggregate throughput matters more than tail latency.
 
+---
+
 ## Method
 
 ### Fine-tuning
@@ -142,6 +242,8 @@ For this workload, concurrency 4 is a responsive multi-user setting, concurrency
 
 See [DESIGN_NOTES.md](docs/DESIGN_NOTES.md) and the machine-readable [benchmark result](assets/bench/benchmark_results.json) for details.
 
+---
+
 ## Reproduce
 
 Verify the published claims — CPU only, offline, no dataset and no weights:
@@ -152,54 +254,39 @@ uv run python scripts/verify_claims.py
 uv run python -m unittest discover -s tests -v
 ```
 
-Confirm the per-item evidence indexes the real ChartQA test split (downloads the
-pinned dataset revision):
+Confirm the per-item evidence indexes the real ChartQA test split (downloads the pinned dataset revision):
 
 ```bash
 uv sync --python 3.12 --extra data
 uv run --extra data python scripts/verify_dataset_alignment.py
 ```
 
-Local data/template smoke test:
+Local data and template smoke test:
 
 ```bash
-uv run --extra data python scripts/smoke_test_data.py
+uv run python -m unittest tests.test_template -v
+uv run python scripts/test_data_pipeline.py --dataset-dir data/ChartQA --smoke
 ```
 
-GPU work is intentionally isolated to Colab A100 notebooks:
+---
 
-1. [train_qlora_colab.ipynb](notebooks/train_qlora_colab.ipynb)
-2. [eval_chartqa_colab.ipynb](notebooks/eval_chartqa_colab.ipynb)
-3. [quantize_vllm_colab.ipynb](notebooks/quantize_vllm_colab.ipynb)
-4. [eval_quant_vllm_fulltest_cu129.ipynb](notebooks/eval_quant_vllm_fulltest_cu129.ipynb)
-5. [benchmark_vllm_colab_cu129.ipynb](notebooks/benchmark_vllm_colab_cu129.ipynb)
-6. [demo_gradio_colab.ipynb](notebooks/demo_gradio_colab.ipynb)
-7. [convert_gguf_colab_cpu_fixed.ipynb](notebooks/convert_gguf_colab_cpu_fixed.ipynb) — persistent CPU Space artifact
+## Repository layout
 
-Colab artifacts are mirrored back into `assets/` with:
-
-```powershell
-uv run python scripts/sync_assets_from_hub.py --user steven0226 --with-bench
+```text
+configs/          Training, quantization, and benchmark configs
+src/              Inference, evaluation, and server implementations
+scripts/          Pipeline entry points and claim verification scripts
+assets/           Machine-readable evaluation and benchmark artifacts
+demo/             Gradio demo application
+space/            CPU inference service (archived, unlaunched)
+space_static/     Static Space portfolio landing page
+notebooks/        Colab A100 training and evaluation notebooks
+tests/            Unit and contract test suites
 ```
 
-## Limitations
-
-- ChartQA mainly measures short-answer chart reading; the model is not validated for arbitrary documents, OCR-heavy scans, or safety-critical decisions.
-- Fine-tuning gains are concentrated on the augmented split; improvement on human-authored questions is small.
-- The serving benchmark fixes every output to 64 tokens. It measures controlled serving behavior, not the natural short-answer distribution.
-- Each benchmark level has 64 requests, so p95 values are exploratory tail indicators rather than production SLA estimates.
-- Requests/s and output tokens/s carry the same relative information in this fixed-output benchmark.
-- vLLM reserves memory according to `gpu_memory_utilization=0.88`; the observed ~36 GB reservation should not be interpreted as an AWQ VRAM reduction measurement.
-- Production deployment should add repeated trials, realistic output lengths, and a longer soak test.
-- The benchmark characterises one A100-SXM4-40GB on `vLLM 0.25.1+cu129` with this specific workload. It does not transfer to other GPUs, versions, or request mixes.
-- The CPU inference service in `space/` was never deployed, so no out-of-domain or soak measurement exists.
+---
 
 ## Data and licensing
 
-This repository's own code is MIT licensed. It **does not redistribute ChartQA** — no chart images, no question text, no gold labels, and no raw prediction strings.
-
-What is published instead is per-item correctness plus a content-free `query_sha256` identifier, which lets anyone holding the pinned dataset confirm alignment without the text being reproduced here. This hash is an integrity aid, not anonymization: a holder of the public corpus can map it back to the query. The Hugging Face dataset card tags ChartQA `gpl-3.0` while leaving the licence body unfilled, and the underlying charts come from third-party publishers, so this project takes the conservative route.
-
-Full details, including how to verify the evidence yourself: [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) and [LICENSE](LICENSE).
-
-Qwen3-VL is Apache 2.0 (Qwen team / Alibaba Cloud). The published model artifacts live on the Hugging Face Hub and are not vendored here.
+- Code: [MIT License](LICENSE).
+- Third-party components and dataset license notices: [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
