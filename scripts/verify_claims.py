@@ -310,7 +310,7 @@ def check_per_item_evidence(f: Failures) -> dict[str, dict]:
 
 def check_readme_accuracy_tables(f: Failures, docs: dict[str, dict]) -> None:
     print("[3/5] README accuracy tables")
-    for readme in ("README.md", "README.zh-TW.md"):
+    for readme in ("README.md", "README.en.md"):
         tables = parse_tables((ROOT / readme).read_text(encoding="utf-8"))
 
         ft = find_table(tables, "n", "before") or find_table(tables, "n", "微調前")
@@ -374,7 +374,7 @@ def check_readme_benchmark(f: Failures) -> None:
 
     label = {"Merged 16-bit": "merged-16bit", "AWQ W4A16 g32": "awq-w4a16-g32"}
 
-    for readme in ("README.md", "README.zh-TW.md"):
+    for readme in ("README.md", "README.en.md"):
         tables = parse_tables((ROOT / readme).read_text(encoding="utf-8"))
         bt = find_table(tables, "concurrency") or find_table(tables, "並發")
         if not f.check(bt is not None, f"{readme}: benchmark table found"):
