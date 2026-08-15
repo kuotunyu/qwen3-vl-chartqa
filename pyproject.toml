@@ -1,6 +1,6 @@
 [project]
 name = "qwen3vl-chartqa-lora"
-version = "0.1.0"
+version = "1.0.0"
 description = "QLoRA fine-tuning of Qwen3-VL-8B-Instruct on ChartQA for chart understanding"
 readme = "README.md"
 # Supported: 3.11 and 3.12, both exercised in CI.

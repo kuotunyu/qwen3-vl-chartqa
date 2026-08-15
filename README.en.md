@@ -1,6 +1,8 @@
 # Qwen3-VL ChartQA: QLoRA, AWQ Quantization, and vLLM Serving
 
 [![CI](https://github.com/kuotunyu/qwen3-vl-chartqa/actions/workflows/ci.yml/badge.svg)](https://github.com/kuotunyu/qwen3-vl-chartqa/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/badge/Release-v1.0.0-blue.svg)](https://github.com/kuotunyu/qwen3-vl-chartqa/releases/tag/v1.0.0)
+[![Status](https://img.shields.io/badge/Status-Complete%20%2F%20Portfolio%20Flagship-success.svg)](https://github.com/kuotunyu/qwen3-vl-chartqa/releases/tag/v1.0.0)
 ![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)
 ![PyTorch](https://img.shields.io/badge/PyTorch-2.0%2B-EE4C2C?logo=pytorch&logoColor=white)
 ![vLLM](https://img.shields.io/badge/vLLM-0.25.1-6366F1)
@@ -10,6 +12,16 @@
 [繁體中文](README.md)
 
 An end-to-end vision-language model project for chart question answering (ChartQA): fine-tuning Qwen3-VL-8B-Instruct on 15,000 examples, validating AWQ W4A16 quantization on the complete 2,500-question test set (-0.72 pp drop, passing the 2 pp quality gate), and benchmarking cache-controlled vLLM serving on a single NVIDIA A100 GPU (+83.2% throughput, -51.9% TPOT p95).
+
+### 30-Second Executive Summary
+
+| Stage | Key Results | Engineering Controls & Artifacts |
+|---|---|---|
+| **QLoRA Fine-tuning** | Full 2,500-question ChartQA Test: **+0.56 pp** (84.68% → 85.24%) | 15k examples, full vision & language adaptation, LoRA + Merged 16-bit |
+| **AWQ Quality Gate** | AWQ W4A16 quality drop of only **-0.72 pp**, passing predefined **-2.0 pp** gate | Model footprint reduced from 17.53 GB to 7.55 GB (**2.32× compression**, -56.9%) |
+| **vLLM A100 Serving** | Output throughput up to **+83.2%**, TPOT p95 reduced by up to **-51.9%** | Single A100, strict cache isolation, 0 failed requests across 8 concurrency levels |
+| **Multi-Target Artifacts** | 4 published weight formats + Interactive Colab demo + Static Space | LoRA / Merged 16-bit / AWQ / GGUF (llama.cpp CPU verified) |
+| **Audited Evidence** | **266 claim checks verified** via `python scripts/verify_claims.py` | Fully reproducible from committed machine-readable evidence in `assets/` |
 
 ---
 

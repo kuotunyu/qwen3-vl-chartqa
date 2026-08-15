@@ -1,6 +1,8 @@
 # Qwen3-VL ChartQA：QLoRA 微調、AWQ 量化與 vLLM 部署
 
 [![CI](https://github.com/kuotunyu/qwen3-vl-chartqa/actions/workflows/ci.yml/badge.svg)](https://github.com/kuotunyu/qwen3-vl-chartqa/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/badge/Release-v1.0.0-blue.svg)](https://github.com/kuotunyu/qwen3-vl-chartqa/releases/tag/v1.0.0)
+[![Status](https://img.shields.io/badge/Status-Complete%20%2F%20Portfolio%20Flagship-success.svg)](https://github.com/kuotunyu/qwen3-vl-chartqa/releases/tag/v1.0.0)
 ![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)
 ![PyTorch](https://img.shields.io/badge/PyTorch-2.0%2B-EE4C2C?logo=pytorch&logoColor=white)
 ![vLLM](https://img.shields.io/badge/vLLM-0.25.1-6366F1)
@@ -10,6 +12,16 @@
 [English](README.en.md)
 
 本專案為針對圖表問答（ChartQA）任務打造的視覺語言模型（VLM）端到端工程：以 15,000 筆資料微調 Qwen3-VL-8B-Instruct，在 2,500 題完整 Test 集上驗證 AWQ W4A16 量化品質（僅下降 0.72 pp，通過 2 pp 品質門檻），並於單張 NVIDIA A100 上完成 cache-controlled 的 vLLM Serving Benchmark（吞吐量提升 83.2%，TPOT p95 降低 51.9%）。
+
+### 30 秒快速摘要 (Executive Summary)
+
+| 階段 (Stage) | 核心指標與成果 (Key Result) | 工程控制與產物 (Controls & Artifacts) |
+|---|---|---|
+| **QLoRA 微調** | 完整 2,500 題 ChartQA Test：**+0.56 pp**（84.68% → 85.24%） | 15,000 樣本、全適配 Vision/Language，生成 LoRA 與 Merged 16-bit 權重 |
+| **AWQ 量化門禁** | AWQ W4A16 僅下降 **-0.72 pp**，通過預設 **-2.0 pp** 嚴格品質門檻 | 權重由 17.53 GB 降至 7.55 GB（**2.32× 壓縮**，減少 56.9%） |
+| **vLLM A100 部署** | 輸出吞吐量最高提升 **+83.2%**，TPOT p95 最高降低 **-51.9%** | 單張 A100、關閉快顯快取、嚴格分離 Warmup 與量測窗、8 組併發 100% 成功 |
+| **多格式產物庫** | 公開 4 種權重格式 + 靜態展示頁 + Colab A100 互動環境 | LoRA / Merged 16-bit / AWQ / GGUF（llama.cpp CPU 驗證） |
+| **自動化審計門禁** | **266 條機械驗證全部通過**（`python scripts/verify_claims.py`） | 數據與報告直接由 `assets/` 證據鏈重算，無任何宣稱造假 |
 
 ---
 
