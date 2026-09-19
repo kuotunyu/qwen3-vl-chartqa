@@ -47,7 +47,7 @@ gold label for every correct item).
 | Evidence | Contents | Location |
 |---|---|---|
 | Aggregate results | split, n, relaxed accuracy | `assets/eval/results.json`, `assets/eval_quant/results.json` |
-| Per-item correctness | positional index, content-free `query_sha256` identifier, correctness flag | `assets/eval/per_item_*.json`, `assets/eval_quant/per_item_*.json` |
+| Per-item correctness | positional index and correctness flag; `query_sha256` is present only in fine-tuning files | `assets/eval/per_item_*.json`, `assets/eval_quant/per_item_*.json` |
 | Benchmark workload | sample id, split, source index, `query_sha256`, image hashes | `assets/bench/workload_manifest.json` |
 
 `query_sha256` is a SHA-256 of the UTF-8 query string. It avoids reproducing the
@@ -57,8 +57,8 @@ public corpus, a holder can map hashes back to its query strings by comparison.
 
 ### Verifying the evidence yourself
 
-- Offline, no dataset needed — recompute every published number and re-check the
-  evidence hash chain:
+- Offline, no dataset needed — recompute accuracy from stored flags, compare
+  selected tables/ratios, and check recorded hash relationships:
 
   ```bash
   python scripts/verify_claims.py
@@ -94,7 +94,9 @@ each under its own licence. `space/Dockerfile` builds `llama.cpp`
 
 ## 5. Reported numbers
 
-Every accuracy, latency and throughput figure in the READMEs is derived from the
-machine-readable evidence in `assets/` and is re-verified on every CI run by
-`scripts/verify_claims.py`. Absolute scores from the two evaluation stacks are
-paired within each table and are not comparable across tables.
+The accuracy and serving tables in the READMEs are compared with stored
+evidence in `assets/` by `scripts/verify_claims.py`. This is an internal
+consistency check, not proof of every claim, original prediction rescoring or
+bootstrap reproduction. Absolute scores are paired within each evaluation
+table; cross-stack differences have not been causally isolated. See the
+[provenance audit](docs/DESIGN_NOTES.md#evaluation-provenance-audit-2026-09-19).

@@ -1,7 +1,10 @@
-"""Verify every headline claim in the READMEs against machine-readable evidence.
+"""Check selected README tables and ratios against stored evidence.
 
-CPU-only, offline, no model weights and no dataset download. Exits non-zero on
-the first category that fails, so CI turns a stale number into a red build.
+CPU-only, offline, no model weights and no dataset download. Collects failures
+across categories and exits non-zero if any implemented check fails.
+Accuracy is recomputed from saved correctness flags, not rescored from raw
+predictions. This does not verify all prose, bootstrap CIs, experimental
+authenticity, or arbitrary publication leaks beyond the patterns below.
 
 What it checks:
 

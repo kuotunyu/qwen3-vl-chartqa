@@ -33,7 +33,7 @@ QLoRA adapter fine-tuned for short-answer chart question answering on ChartQA. T
 - Optimizer: 8-bit AdamW; peak learning rate `2e-4`; linear schedule
 - Seed: 3407
 - Runtime: 3,579 seconds
-- Final training loss: 0.5907
+- Run-summary train_loss: 0.5907 (not a convergence criterion)
 
 ![Training loss](https://huggingface.co/steven0226/qwen3vl-8b-chartqa-lora/resolve/main/loss_curve.png)
 

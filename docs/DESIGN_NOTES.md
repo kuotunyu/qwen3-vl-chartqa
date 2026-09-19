@@ -21,6 +21,93 @@ Qwen3-VL-8B-Instruct was selected because the Unsloth, Transformers, llm-compres
 
 ChartQA provides a 2,500-question test split with equal human and augmented subsets. Every reported quality delta is paired within one evaluation recipe. Absolute scores from the Transformers/LoRA evaluation and the isolated-vLLM merged/AWQ evaluation are not cross-compared because their inference stacks differ.
 
+### Evaluation provenance audit (2026-09-19)
+
+This is a source/evidence review of the existing results, not a new experiment.
+The two accuracy comparisons answer different questions. The 85.24% result is
+**not** a measurement of the merged 16-bit model in the later vLLM run.
+
+| Evidence dimension | Fine-tuning comparison: 84.68% → 85.24% | Quantization comparison: 86.24% → 85.52% |
+|---|---|---|
+| Committed result identity | [eval/results.json](../assets/eval/results.json), `eval_limit=null`; no run ID, timestamp, model revision or runtime block | [eval_quant/results.json](../assets/eval_quant/results.json), 1,250 per split; runtime and recipe recorded, no separate run ID |
+| Models | `unsloth/Qwen3-VL-8B-Instruct-unsloth-bnb-4bit` before; `steven0226/qwen3vl-8b-chartqa-lora` after | `steven0226/qwen3vl-8b-chartqa-merged-16bit` vs `steven0226/qwen3vl-8b-chartqa-awq` |
+| Backend and versions | [Fine-tuning eval notebook](../notebooks/eval_chartqa_colab.ipynb), cells 2, 7–9: Unsloth `FastVisionModel`, `load_in_4bit=True`, Transformers `generate`; install cell specifies Transformers 4.57.1, but the result does not record resolved versions | Result runtime: isolated vLLM, Python 3.12.13, vLLM 0.25.1+cu129, torch 2.11.0+cu129, Transformers 5.10.1, compressed-tensors 0.17.0 |
+| Input recipe in source | Notebook cells 5, 7: original image converted to RGB, passed to processor; user image + query + short-answer instruction; processor chat template, generation prompt, left padding | [Quantization eval notebook](../notebooks/eval_quant_vllm_fulltest_cu129.ipynb), cell 4: RGB thumbnail ≤1,024 px, JPEG quality 90 data URI; user image_url + query + same instruction, `llm.chat` |
+| Prompt instruction | `Answer the question using a single word or phrase.` | Same literal instruction; rendered template/token equivalence is not recorded |
+| Decode in source | Cells 4, 7: batch size 8, `max_new_tokens=32`, `do_sample=False`; other generation defaults not saved in the result | Cell 4: `SamplingParams(temperature=0, max_tokens=32)`; runtime records model length 4,096, max sequences 8, eager mode |
+| Dataset and order | Per-item files name ChartQA, 1,250 human + 1,250 augmented; notebook filters split and only shuffles for a smaller sample, so full evaluation retains source order | Recorded dataset revision `b605b6e08b57faf4359aeb2fe6a3ca595f99b6c5`; notebook always shuffles each split with seed 3407, even at n=1,250 |
+| Metric implementation in source | `relaxed_accuracy(5%)`: trim prediction whitespace and one trailing period; numeric relative error ≤5%; otherwise case-insensitive exact match, including zero target | Same numeric/zero-target rule and prediction cleanup; additionally strips target whitespace |
+| Public per-item evidence | [baseline](../assets/eval/per_item_baseline.json) / [finetuned](../assets/eval/per_item_finetuned.json): idx, query hash, correctness | [merged16](../assets/eval_quant/per_item_merged16_n1250.json) / [AWQ](../assets/eval_quant/per_item_awq_n1250.json): idx and correctness, **no query hash** |
+
+Cell numbers above are zero-based JSON cell indices; no notebook was executed.
+The fine-tuning notebook currently defaults to `EVAL_LIMIT=100`, whereas the
+committed full-test result records `null` and 2,500 questions. Source defaults
+are therefore evidence of the available recipe, not proof of every historical
+execution setting. In particular, the fine-tuning model/adapter/dataset
+revisions, resolved package versions, generation defaults, and rendered
+prompts remain unconfirmed. Later alignment tooling pins a dataset revision;
+that does not retroactively make the original run revision-pinned.
+
+The quantization runtime records merged revision
+`519060ef43df3261e0512e5ae4c82a4d4e675f32`, AWQ revision
+`e81d9332446307adc1b219ed326c8e55cead9015`, their fingerprints, and recipe
+`chartqa-test-seed3407-jpeg1024q90-shortanswer-relaxed5-v1-vllm0251cu129`.
+These are historical identifiers; the public-equivalent AWQ revision is
+documented below. Serving run `v2-aa4442870cfd` is a separate benchmark ID,
+not either accuracy evaluation's run ID. Its forced 64-token decode must not
+be substituted for the accuracy notebooks' 32-token maximum.
+
+These sources establish different model representations and inference recipes.
+They do **not** isolate the cause of the 1.00 pp gap between 85.24% and 86.24%:
+precision, preprocessing, versions and scoring cleanup were not individually
+controlled. Do not attribute the gap to merging, quantization, prompt changes,
+or a backend improvement. The short-answer instruction is the same in source;
+the effect of target whitespace cannot be determined without original answers.
+
+### Case-analysis boundary
+
+The public files are correctness records, not prediction records. They lack
+prediction strings, gold answers, questions, images, and failure-type labels.
+Fine-tuning idx plus query hash supports within-pair alignment; quantization
+idx refers to a shuffled position and lacks a content hash. Do not join the
+two stacks by idx. The generic redistribution note in quantization JSON
+mentions query hashes, but the actual item schema does not contain them.
+
+This is insufficient for traceable qualitative success/failure analysis or
+OCR/arithmetic/legend-error classification. A correctness flip does not identify
+why a model failed. No original predictions were recovered or republished;
+synthetic OOD images have no measured model outcomes in this repository.
+The existing evaluation notebook's illustrative picks omit the regression
+category and cannot stand in for an exhaustive error analysis.
+
+If an authorized analysis later has the original records, first verify stable
+sample identity and source run/revision, then classify all paired records as
+both correct, improved, regressed, or both incorrect. A deterministic display
+rule would take the smallest stable sample ID in each nonempty category within
+each split, alongside full category counts, source run, predictions and the
+scoring rule. These would be illustrative examples, not prevalence estimates
+or causal labels. That rule has **not** been applied here because the required
+records and permission to publish their contents are absent. See the
+[publication boundary](../THIRD_PARTY_NOTICES.md); this review does not expand it.
+
+### What offline verification establishes
+
+`scripts/verify_claims.py` reads JSON/Markdown and runs read-only Git commands.
+It imports neither a model stack nor a dataset loader and does not write
+evidence. It checks stored correctness counts, README tables, selected derived
+ratios, benchmark validity flags, limited hash relationships and publication
+patterns. Passing counts (historically described as 266 checks) measure the
+implemented assertions, not independent experiments or universal claim truth.
+Accuracy is recalculated from saved flags, not rescored from answers.
+Not every artifact has a recorded hash; flags asserting benchmark validity
+are not an independent replay of timing logs.
+
+The historical paired bootstrap CI `[-1.40, -0.04] pp` appears in prose, but
+this repository does not retain its seed, resample count or executable
+calculation. The verifier does not recompute it. The recorded quality gate is
+based on the point-estimate drop (0.72 pp ≤ 2 pp); its PASS remains supported
+by the stored correctness evidence. The CI's exact reproduction is unresolved.
+
 ### Relaxed accuracy: canonical zero-target behaviour
 
 `relaxed_correctness` tests the truthiness of the parsed target, not `is not None`:
@@ -52,7 +139,7 @@ The overall gain was +0.56 pp. Most improvement came from the augmented subset; 
 
 Only language `Linear` weights were quantized to symmetric 4-bit groups of 32. The vision tower and `lm_head` remained at their original precision. Calibration used 256 ChartQA training examples with a 2,048-token cap.
 
-The deployment gate was defined before the formal full-test run: AWQ could lose at most 2 percentage points versus merged 16-bit. The observed loss was 0.72 pp; paired bootstrap 95% CI was `[-1.40, -0.04] pp`, so the gate passed without re-quantization.
+The recorded deployment gate allows at most a 2 percentage point drop versus merged 16-bit. The observed point-estimate loss was 0.72 pp, so the gate passed without re-quantization. The historical bootstrap interval is retained with its reproduction gap in the audit above.
 
 ## Serving benchmark design
 
@@ -178,10 +265,10 @@ Colab A100 notebook.
 ## Publication boundary
 
 This repository does not redistribute ChartQA. Published evidence is per-item
-correctness with a content-free `query_sha256` identifier, never the query text, gold labels,
+correctness (with `query_sha256` in the fine-tuning files), never the query text, gold labels,
 chart images, or raw prediction strings. `scripts/verify_claims.py` recomputes
-every headline number from that evidence and also enforces the boundary, so a
-regression fails CI rather than shipping. See
+accuracy from saved flags and checks selected tables, ratios and publication
+patterns. Those checks cannot establish the truth of every prose claim. See
 [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md).
 
 ## Interview Q&A
@@ -208,7 +295,7 @@ The vision stack is a small share of total weights, while quantizing it introduc
 
 ### 6. Why does AWQ improve TPOT but sometimes worsen TTFT?
 
-Lower-bit weight movement accelerates repeated decode steps. At higher concurrency, scheduling, multimodal preprocessing, batching, and quantized-kernel setup can add prefill/queueing overhead before the first token.
+This run measures the tradeoff but does not isolate its cause. Weight movement, scheduling, multimodal preprocessing, batching, and kernel setup are possible contributors that would require separate measurements; they are not established explanations of these results.
 
 ### 7. Why not trust the n=100 quality check?
 
