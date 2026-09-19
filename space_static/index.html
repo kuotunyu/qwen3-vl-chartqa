@@ -511,7 +511,7 @@
           <article class="metric-card" data-reveal style="--delay:90ms">
             <div class="metric-label"><span>Quantization Δ</span><span>PASS</span></div>
             <div class="metric-value">−0.72<span style="font-size:.36em;letter-spacing:0"> pp</span></div>
-            <p>低於預先定義的 −2 pp 品質門檻；paired bootstrap 95% CI 為 [−1.40, −0.04] pp。</p>
+            <p>點估計下降 0.72 pp，通過 2 pp 品質門檻。歷史報告的 bootstrap 95% CI 為 [−1.40, −0.04] pp；repo 缺少重抽樣參數，離線檢查未驗證此區間。</p>
           </article>
           <article class="metric-card" data-reveal style="--delay:180ms">
             <div class="metric-label"><span>Weight files</span><span>−56.9%</span></div>
@@ -519,7 +519,7 @@
             <p>由 merged 16-bit 的 17.53 GB 壓縮至 AWQ W4A16 g32。</p>
           </article>
         </div>
-        <div class="fineprint">註：微調前後表與 merged/AWQ 量化表使用不同的 paired evaluation stack，分數只在各自表內比較，不跨 stack 排名。</div>
+        <div class="fineprint">微調比較為 84.68% → 85.24%（4-bit base + LoRA）；量化比較為 86.24% → 85.52%（merged/AWQ、獨立 vLLM）。來源程式的影像處理與排序不同，微調 run 版本紀錄不完整；不能將 1.00 pp 差距歸因於單一因素。離線正誤統計檢查不等同重新評分或驗證所有宣稱。</div>
       </div>
     </section>
 
@@ -543,6 +543,7 @@
             <div class="ledger-item"><strong>701.9</strong><span>tokens/s at concurrency 16</span></div>
           </div>
         </div>
+        <p class="fineprint">限制：每組只有 64 requests，p95 為探索性結果；固定 64 output tokens 並忽略 EOS，不代表自然短答負載。結果僅適用於這次單 A100、vLLM 0.25.1+cu129 與固定版本測試。AWQ 的 TTFT p95 在 concurrency 4／8／16 退步 +9.0%／+20.9%／+18.8%，不能只依吞吐量決定服務設定。</p>
       </div>
     </section>
 
@@ -550,7 +551,7 @@
       <div class="shell">
         <div class="section-head">
           <div class="section-no">03 / PIPELINE</div>
-          <div><h2 data-reveal>從資料到部署，<br>完整走完一輪。</h2><p class="section-lead" data-reveal>訓練、評估、量化與 serving 各自隔離，產物透過 pinned revision 銜接，避免把環境差異誤認為模型改善。</p></div>
+          <div><h2 data-reveal>從資料到部署，<br>完整走完一輪。</h2><p class="section-lead" data-reveal>訓練、評估、量化與 serving 分階段保存證據；量化與 benchmark 記錄 pinned revision，微調評測仍有版本追溯缺口。</p></div>
         </div>
         <div class="pipeline" data-reveal>
           <article class="stage"><div class="stage-no">01</div><h3>ChartQA 資料</h3><p>15,000 筆 train；human／augmented 分層保留。</p></article>
@@ -610,7 +611,7 @@
           <p>開啟 notebook 後選擇 A100 runtime，確認 Colab Secret 已設定 `HF_TOKEN`，再按「全部執行」。最後一格會產生暫時的 Gradio 分享網址。</p>
           <div class="hero-actions">
             <a class="btn btn-primary" href="https://colab.research.google.com/#fileId=https://huggingface.co/spaces/steven0226/qwen3vl-chartqa-demo/blob/main/demo_gradio_colab.ipynb" target="_blank" rel="noopener"><span>開啟 Demo Notebook</span><span class="arrow">↗</span></a>
-            <a class="btn btn-dark" href="https://huggingface.co/HuggingFaceM4/ChartQA" target="_blank" rel="noopener"><span>查看 ChartQA Dataset</span><span class="arrow">→</span></a>
+            <a class="btn btn-dark" href="https://huggingface.co/datasets/HuggingFaceM4/ChartQA" target="_blank" rel="noopener"><span>查看 ChartQA Dataset</span><span class="arrow">→</span></a>
           </div>
         </div>
       </div>

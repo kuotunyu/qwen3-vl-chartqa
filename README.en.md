@@ -11,7 +11,7 @@
 
 [繁體中文](README.md)
 
-An end-to-end vision-language model project for chart question answering (ChartQA): fine-tuning Qwen3-VL-8B-Instruct on 15,000 examples, validating AWQ W4A16 quantization on the complete 2,500-question test set (-0.72 pp drop, passing the 2 pp quality gate), and benchmarking cache-controlled vLLM serving on a single NVIDIA A100 GPU (+83.2% throughput, -51.9% TPOT p95).
+This project uses existing Qwen3-VL-8B-Instruct experiments to examine chart-understanding quality, quantization, and serving tradeoffs. Fine-tuning on 15,000 examples improved full-test accuracy by 0.56 pp; the separate merged/AWQ comparison lost 0.72 pp, within the 2 pp gate. On one A100, the controlled benchmark measured +83.2% throughput and -51.9% TPOT p95 at concurrency 1, with worse TTFT at higher concurrency. Each group contains only 64 requests, so p95 is exploratory.
 
 ### 30-Second Executive Summary
 
@@ -19,9 +19,9 @@ An end-to-end vision-language model project for chart question answering (ChartQ
 |---|---|---|
 | **QLoRA Fine-tuning** | Full 2,500-question ChartQA Test: **+0.56 pp** (84.68% → 85.24%) | 15k examples, full vision & language adaptation, LoRA + Merged 16-bit |
 | **AWQ Quality Gate** | AWQ W4A16 quality drop of only **-0.72 pp**, passing predefined **-2.0 pp** gate | Model footprint reduced from 17.53 GB to 7.55 GB (**2.32× compression**, -56.9%) |
-| **vLLM A100 Serving** | Output throughput up to **+83.2%**, TPOT p95 reduced by up to **-51.9%** | Single A100, strict cache isolation, 0 failed requests across 8 concurrency levels |
+| **vLLM A100 Serving** | At concurrency 1: **+83.2%** throughput, **-51.9%** TPOT p95; TTFT p95 worsens at c=4/8/16 | Single A100, fixed versions, 64 requests × 64 output tokens per group; all 8 model/concurrency combinations succeeded; exploratory p95 |
 | **Multi-Target Artifacts** | 4 published weight formats + Interactive Colab demo + Static Space | LoRA / Merged 16-bit / AWQ / GGUF (llama.cpp CPU verified) |
-| **Audited Evidence** | **266 claim checks verified** via `python scripts/verify_claims.py` | Fully reproducible from committed machine-readable evidence in `assets/` |
+| **Offline Evidence Checks** | `python scripts/verify_claims.py` checks tables, correctness flags, and selected hash/publication rules | Passing establishes consistency under implemented checks; it does not establish every claim's truth or rerun inference/scoring |
 
 ---
 
@@ -86,7 +86,7 @@ flowchart TD
         direction LR
         Space(["Hugging Face Static Space<br/>(Evidence-only static showcase)"])
         Colab(["Colab A100 Interactive Notebook<br/>(One-click AWQ live serving)"])
-        Audit{"266 Claim Check Gates<br/>(verify_claims.py)"}
+        Audit{"Offline Evidence Consistency Checks<br/>(verify_claims.py)"}
     end
 
     M1 & M2 --> vLLMEng
@@ -127,7 +127,9 @@ Live Showcase: [Hugging Face Space Demo](https://huggingface.co/spaces/steven022
 
 ## Results
 
-All published figures are recomputed from machine-readable evidence in `assets/` on each CI run:
+These are historical experimental results. `scripts/verify_claims.py` recomputes accuracy from stored correctness flags in `assets/`, compares the tables below, and checks selected derived metrics. It does not generate predictions or rescore original answers, and not every evidence file has a recorded hash.
+
+**85.24% and 86.24% have different sources:** the [fine-tuning evaluation](assets/eval/results.json) uses Unsloth/Transformers with a 4-bit base plus LoRA; the [quantization evaluation](assets/eval_quant/results.json) uses merged 16-bit in isolated vLLM. The corresponding notebooks specify the same short-answer instruction and a 32-token maximum, but different image processing, ordering, and inference stacks. The fine-tuning run lacks complete version and execution metadata. The 1.00 pp gap cannot be attributed to one factor or treated as a sequential improvement. Interpret **84.68→85.24** and **86.24→85.52** separately; see [setting provenance and unresolved details](docs/DESIGN_NOTES.md#evaluation-provenance-audit-2026-09-19).
 
 ### Fine-tuning effect
 
@@ -149,11 +151,13 @@ Merged 16-bit and AWQ evaluated in isolated vLLM subprocesses (predefined thresh
 | Augmented | 1,250 | 95.20% | 94.48% | -0.72 pp |
 | Overall | 2,500 | 86.24% | **85.52%** | **-0.72 pp — PASS** |
 
-The paired bootstrap 95% confidence interval for the overall AWQ change is `[-1.40, -0.04] pp`, safely within the -2.0 pp quality gate.
+Historical documentation reports a paired bootstrap 95% CI of `[-1.40, -0.04] pp` for the overall AWQ change. The repository lacks that bootstrap's seed, resample count, and executable source; the offline verifier does not verify this interval. The recorded gate passes on the point estimate: a 0.72 pp drop ≤ 2.0 pp.
 
 ### Serving benchmark
 
 Evaluated on one NVIDIA A100-SXM4-40GB with vLLM `0.25.1+cu129`, 64 measured requests per level, fixed 64-token decode; all 8 levels passed the validity gate:
+
+Run `v2-aa4442870cfd` uses torch `2.11.0+cu129` and fixed model/dataset revisions. Each group forces 64 output tokens (ignoring EOS), which does not represent natural short-answer lengths. **With only 64 requests per group, p95 is exploratory** and does not establish performance on other hardware/versions or a production SLA. See the [original benchmark table](assets/bench/benchmark_table.md) and [design notes](docs/DESIGN_NOTES.md#serving-benchmark-design).
 
 | Model | Concurrency | Output tok/s | TTFT p95 | TPOT p95 | E2E p95 |
 |---|---:|---:|---:|---:|---:|
@@ -168,19 +172,23 @@ Evaluated on one NVIDIA A100-SXM4-40GB with vLLM `0.25.1+cu129`, 64 measured req
 
 ![A100 vLLM latency and throughput benchmark](assets/bench/latency_throughput.png)
 
-Compared with Merged 16-bit, AWQ:
+Under this controlled workload, compared with Merged 16-bit, AWQ:
 
 - reduces weight files from 17.53 GB to 7.55 GB (`-56.9%`, 2.32× compression);
 - improves output throughput by 83.2%, 54.5%, 36.4%, and 18.0% at concurrency 1/4/8/16;
 - reduces TPOT p95 by 51.9%, 39.4%, 32.4%, and 17.4%;
 - reduces E2E p95 by 44.2%, 33.6%, 27.2%, and 19.6%;
-- trades higher TTFT p95 at concurrency 4/8/16 (+9.0%, +20.9%, +18.8%).
+- trades higher TTFT p95 at concurrency 4/8/16 (+9.0%, +20.9%, +18.8%); acceptability depends on first-token latency requirements, and this test does not establish the cause.
+
+### Success/failure case evidence gap
+
+Public per-item files contain only `idx` and `correct` (plus `query_sha256` for fine-tuning), without predictions, answers, questions, or charts. Quantization files also lack query hashes; matching idx across the two evaluation orderings would be invalid. These files support correctness statistics, but cannot establish OCR, arithmetic, or legend-reading failure causes. This review neither selects illustrative charts as evidence nor restores removed content. Missing fields and a prospective selection rule are recorded in the [case-analysis boundary](docs/DESIGN_NOTES.md#case-analysis-boundary); the synthetic showcase chart is not a model success case.
 
 ---
 
 ## Method & Engineering Controls
 
-- **QLoRA Fine-tuning:** 8-bit AdamW, peak learning rate `2e-4`, effective batch size 16 on A100 adapting vision and language modules (loss: 0.5907 in 3,579s).
+- **QLoRA Fine-tuning:** 8-bit AdamW, peak learning rate `2e-4`, effective batch size 16 on A100 adapting vision and language modules. The [training log](assets/log_history.json) records 1 epoch, 938 steps, 3,579 seconds, and run-summary `train_loss=0.5907`; elapsed time and this loss alone do not demonstrate convergence or generalization.
 - **AWQ W4A16:** 4-bit symmetric grouped weights (group size 32), 256 calibration samples, vision tower and `lm_head` in original precision.
 - **GGUF Export:** `Q4_K_M` text model and `Q8_0` multimodal projector with independent CPU smoke test.
 - **Strict Benchmark Controls:** Caches disabled, warmup/measured inputs isolated, single physical GPU bound.
@@ -189,13 +197,20 @@ Compared with Merged 16-bit, AWQ:
 
 ## Reproduce
 
-Offline verification (CPU-only, no weights or dataset downloads needed):
+Prepare locked dependencies first (the initial installation may need network access):
 
 ```bash
-uv sync --python 3.12
-uv run python scripts/verify_claims.py
-uv run python -m unittest discover -s tests -v
+uv sync --frozen --python 3.12
 ```
+
+Once the environment is ready, verify offline without a GPU, weights, or dataset:
+
+```bash
+uv run --offline --no-sync python scripts/verify_claims.py
+uv run --offline --no-sync python -m unittest discover -s tests -v
+```
+
+Verification covers implemented numerical checks and rules, not all prose claims, original prediction scoring, the bootstrap CI, or the authenticity of experimental provenance. The 2026-09-19 review checks local documentation/evidence; it does not rerun historical experiments.
 
 ---
 
