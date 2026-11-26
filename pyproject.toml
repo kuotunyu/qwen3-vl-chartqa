@@ -11,7 +11,7 @@ license = { text = "MIT" }
 dependencies = [
     "huggingface-hub[cli]>=0.36",
     "datasets>=4.0",
-    "pillow>=12.3.0",
+    "pillow>=13.0.0",
     "python-dotenv>=1.0",
 ]
 
@@ -44,10 +44,10 @@ demo = [
     "gradio>=5.9",
 ]
 space = [
-    "gradio==6.20.0",
+    "gradio==6.32.0",
     "huggingface-hub==1.23.0",
     "httpx==0.28.1",
-    "pillow==12.3.0",
+    "pillow==13.0.0",
     "fastapi==0.139.2",
     "pydantic==2.13.4",
     "uvicorn==0.51.0",
